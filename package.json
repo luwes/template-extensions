@@ -1,0 +1,45 @@
+{
+  "name": "template-extensions",
+  "version": "0.1.0",
+  "description": "",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "format": "eslint '*.js' --fix",
+    "test": "web-test-runner **/*test.js --config test/web-test-runner.config.js"
+  },
+  "keywords": [],
+  "author": "Wesley Luyten <me@wesleyluyten.com> (https://wesleyluyten.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/luwes/template-extensions/issues"
+  },
+  "homepage": "https://github.com/luwes/template-extensions#readme",
+  "devDependencies": {
+    "@open-wc/testing": "^3.1.6",
+    "@web/dev-server-esbuild": "^0.3.2",
+    "@web/dev-server-import-maps": "^0.0.7",
+    "@web/test-runner": "^0.14.0",
+    "eslint": "^8.24.0",
+    "prettier": "^2.7.1",
+    "typescript": "^4.8.4"
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es6": true,
+      "node": true,
+      "mocha": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2022,
+      "sourceType": "module"
+    },
+    "rules": {
+      "semi": "error"
+    }
+  }
+}
