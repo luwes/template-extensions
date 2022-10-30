@@ -1,10 +1,11 @@
 /* Adapted from https://github.com/dy/template-parts - ISC - Dmitry Iv. */
 
 // Template Instance API
-// https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md#32-template-parts-and-custom-template-process-callback
+// https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md
 
 import {
-  AttributePart,
+  AttrPart,
+  AttrPartList,
   ChildNodePart,
   InnerTemplatePart,
 } from './dom-parts.js';
@@ -22,13 +23,13 @@ export const defaultProcessor = {
         // boolean attr
         if (
           typeof value === 'boolean' &&
-          part instanceof AttributePart &&
+          part instanceof AttrPart &&
           typeof part.element[part.attributeName] === 'boolean'
         ) {
           part.booleanValue = value;
         } else if (
           typeof value === 'function' &&
-          part instanceof AttributePart
+          part instanceof AttrPart
         ) {
           part.element[part.attributeName] = value;
         } else {
@@ -57,47 +58,45 @@ export class TemplateInstance extends DocumentFragment {
 
 // collect element parts
 export const parse = (element, parts = []) => {
-  let attr, node, setter, type, value, part;
+  let type, value;
 
-  for (attr of element.attributes || []) {
+  for (let attr of element.attributes || []) {
     if (attr.value.includes('{{')) {
-      setter = { element, attr, parts: [] };
+      const list = new AttrPartList();
       for ([type, value] of tokenize(attr.value)) {
-        if (!type) setter.parts.push(value);
+        if (!type) list.append(value);
         else {
-          part = new AttributePart(setter);
-          setter.parts.push(part);
+          const part = new AttrPart(element, attr.name, attr.namespaceURI);
+          list.append(part);
           parts.push([value, part]);
         }
       }
-      attr.value = setter.parts.join('');
+      attr.value = list.toString();
     }
   }
 
-  for (node of element.childNodes) {
+  for (let node of element.childNodes) {
     if (node.nodeType === ELEMENT && !(node instanceof HTMLTemplateElement)) {
       parse(node, parts);
     } else {
       if (node.nodeType === ELEMENT || node.data.includes('{{')) {
-        const nodes = [];
-        const setter = { parentNode: element };
-
+        const items = [];
         if (node.data) {
           for ([type, value] of tokenize(node.data))
-            if (!type) nodes.push(new Text(value));
+            if (!type) items.push(new Text(value));
             else {
-              part = new ChildNodePart(setter);
-              nodes.push(part);
+              const part = new ChildNodePart(element);
+              items.push(part);
               parts.push([value, part]);
             }
         } else {
-          part = new InnerTemplatePart(setter, node);
-          nodes.push(part);
+          const part = new InnerTemplatePart(element, node);
+          items.push(part);
           parts.push([part.expression, part]);
         }
 
         node.replaceWith(
-          ...nodes.flatMap((part) => part.replacementNodes || [part])
+          ...items.flatMap((part) => part.replacementNodes || [part])
         );
       }
     }
