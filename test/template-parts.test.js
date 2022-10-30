@@ -2,7 +2,7 @@
 
 import { assert } from '@open-wc/testing';
 import { TemplateInstance, tokenize } from '../src/template-instance.js';
-import { AttributePart } from '../src/dom-parts.js';
+import { AttrPart, AttrPartList } from '../src/dom-parts.js';
 
 const test = it;
 const is = assert.deepEqual;
@@ -314,7 +314,7 @@ const propertyIdentityOrBooleanAttribute = {
         // boolean attr
         if (
           typeof value === 'boolean' &&
-          part instanceof AttributePart &&
+          part instanceof AttrPart &&
           typeof part.element[part.attributeName] === 'boolean'
         )
           part.booleanValue = value;
@@ -565,9 +565,7 @@ test('innerTemplatePart: full form', () => {
 test('attr: updates the given attribute from partList when updateParent is called', () => {
   const el = document.createElement('div');
   const attr = document.createAttribute('class');
-  const instance = { element: el, attr, parts: [] }; //new AttributeValueSetter(el, attr)
-  const part = new AttributePart(instance);
-  instance.parts = [part];
+  const part = new AttrPart(el, attr.name, attr.namespaceURI);
   part.value = 'foo';
   is(el.getAttribute('class'), 'foo');
 });
@@ -575,31 +573,31 @@ test('attr: updates the given attribute from partList when updateParent is calle
 test('attr: updates the AttributeValue which updates the Attr whenever it receives a new value', () => {
   const el = document.createElement('div');
   const attr = document.createAttribute('class');
-  const instance = { element: el, attr, parts: [] }; //new AttributeValueSetter(el, attr)
-  instance.parts = [
-    new AttributePart(instance),
-    new AttributePart(instance),
-  ];
-  instance.parts[0].value = 'hello';
-  instance.parts[1].value = ' world'; // NOTE: space here
+  const list = new AttrPartList();
+  list.append(
+    new AttrPart(el, attr.name, attr.namespaceURI),
+    new AttrPart(el, attr.name, attr.namespaceURI),
+  );
+  list.item(0).value = 'hello';
+  list.item(1).value = ' world'; // NOTE: space here
   is(el.getAttribute('class'), 'hello world');
 
-  instance.parts[0].value = 'goodbye';
+  list.item(0).value = 'goodbye';
   is(el.getAttribute('class'), 'goodbye world');
 });
 
 test('attr: updates boolean attr', () => {
   const el = document.createElement('div');
   const attr = document.createAttribute('hidden');
-  const instance = { element: el, attr, parts: [] };
-  instance.parts = [new AttributePart(instance)];
-  instance.parts[0].booleanValue = false;
+  const list = new AttrPartList();
+  list.append(new AttrPart(el, attr.name, attr.namespaceURI));
+  list.item(0).booleanValue = false;
   is(el.hasAttribute('hidden'), false);
-  is(instance.parts[0].booleanValue, false);
+  is(list.item(0).booleanValue, false);
 
-  instance.parts[0].booleanValue = true;
+  list.item(0).booleanValue = true;
   is(el.hasAttribute('hidden'), true);
-  is(instance.parts[0].booleanValue, true);
+  is(list.item(0).booleanValue, true);
 });
 
 test('nodes: should preserve spaces', () => {

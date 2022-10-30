@@ -1,24 +1,73 @@
+// DOM Part API
+// https://github.com/WICG/webcomponents/blob/gh-pages/proposals/DOM-Parts.md
+
+/*
+  Divergence from the proposal:
+
+    - Renamed AttributePart to AttrPart to match the existing class `Attr`.
+    - Renamed AttributePartGroup to AttrPartList as a group feels not ordered
+      while this collection should maintain its order. Also closer to DOMTokenList.
+    - A ChildNodePartGroup would make things unnecessarily difficult in this
+      implementation. Instead an empty text node keeps track of the ChildNodePart's
+      location in the child nodelist if needed.
+ */
+
 const FRAGMENT = 11;
 
 export class Part {
-  constructor(setter) {
-    this.setter = setter;
-  }
   toString() {
     return this.value;
   }
 }
 
-export class AttributePart extends Part {
+const attrPartToList = new WeakMap();
+
+export class AttrPartList {
+  #items = [];
+  [Symbol.iterator]() {
+    return this.#items.values();
+  }
+  get length() {
+    return this.#items.length;
+  }
+  item(index) {
+    return this.#items[index];
+  }
+  append(...items) {
+    for (const item of items) {
+      if (item instanceof AttrPart) {
+        attrPartToList.set(item, this);
+      }
+      this.#items.push(item);
+    }
+  }
+  toString() {
+    return this.#items.join('');
+  }
+}
+
+export class AttrPart extends Part {
   #value = '';
+  #element;
+  #attributeName;
+  #namespaceURI;
+  constructor(element, attributeName, namespaceURI) {
+    super();
+    this.#element = element;
+    this.#attributeName = attributeName;
+    this.#namespaceURI = namespaceURI;
+  }
+  get #list() {
+    return attrPartToList.get(this);
+  }
   get attributeName() {
-    return this.setter.attr.name;
+    return this.#attributeName;
   }
   get attributeNamespace() {
-    return this.setter.attr.namespaceURI;
+    return this.#namespaceURI;
   }
   get element() {
-    return this.setter.element;
+    return this.#element;
   }
   get value() {
     return this.#value;
@@ -26,33 +75,53 @@ export class AttributePart extends Part {
   set value(newValue) {
     if (this.#value === newValue) return; // save unnecessary call
     this.#value = newValue;
-    const { attr, element, parts } = this.setter;
-    if (parts.length === 1) {
+    if (!this.#list || this.#list.length === 1) {
       // fully templatized
-      if (newValue == null)
-        element.removeAttributeNS(attr.namespaceURI, attr.name);
-      else element.setAttributeNS(attr.namespaceURI, attr.name, newValue);
-    } else element.setAttributeNS(attr.namespaceURI, attr.name, parts.join(''));
+      if (newValue == null) {
+        this.#element.removeAttributeNS(
+          this.#namespaceURI,
+          this.#attributeName
+        );
+      } else {
+        this.#element.setAttributeNS(
+          this.#namespaceURI,
+          this.#attributeName,
+          newValue
+        );
+      }
+    } else {
+      this.#element.setAttributeNS(
+        this.#namespaceURI,
+        this.#attributeName,
+        this.#list
+      );
+    }
   }
   get booleanValue() {
-    return this.setter.element.hasAttributeNS(
-      this.attributeNamespace,
-      this.setter.attr.name
+    return this.#element.hasAttributeNS(
+      this.#namespaceURI,
+      this.#attributeName
     );
   }
   set booleanValue(value) {
-    if (this.setter.parts.length === 1) this.value = value ? '' : null;
+    if (!this.#list || this.#list.length === 1) this.value = value ? '' : null;
     else throw new DOMException('Value is not fully templatized');
   }
 }
 
 export class ChildNodePart extends Part {
-  #nodes = [this.setter.parts?.[0] ?? new Text()];
+  #parentNode;
+  #nodes;
+  constructor(parentNode, nodes) {
+    super();
+    this.#parentNode = parentNode;
+    this.#nodes = nodes ? [...nodes] : [new Text()];
+  }
   get replacementNodes() {
     return this.#nodes;
   }
   get parentNode() {
-    return this.setter.parentNode;
+    return this.#parentNode;
   }
   get nextSibling() {
     return this.#nodes[this.#nodes.length - 1].nextSibling;
@@ -98,7 +167,7 @@ export class ChildNodePart extends Part {
 
 export class InnerTemplatePart extends ChildNodePart {
   directive;
-  constructor(setter, template) {
+  constructor(parentNode, template) {
     let directive =
       template.getAttribute('directive') || template.getAttribute('type');
     let expression =
@@ -108,7 +177,7 @@ export class InnerTemplatePart extends ChildNodePart {
     if (expression.startsWith('{{'))
       expression = expression.trim().slice(2, -2).trim();
 
-    super(setter);
+    super(parentNode);
 
     this.expression = expression;
     this.template = template;
