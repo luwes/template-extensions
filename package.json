@@ -4,6 +4,7 @@
   "description": "",
   "type": "module",
   "main": "src/index.js",
+  "types": "src/types.d.ts",
   "scripts": {
     "format": "eslint '*.js' --fix",
     "test": "web-test-runner **/*test.js --config test/web-test-runner.config.js"
