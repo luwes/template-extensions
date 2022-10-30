@@ -1,32 +1,34 @@
 /* Adapted from https://github.com/dy/template-parts - ISC - Dmitry Iv. */
-/*
-  - Removed swapdom reconciliation
- */
 
 // Template Instance API
 // https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md#32-template-parts-and-custom-template-process-callback
 
+import {
+  AttributePart,
+  ChildNodePart,
+  InnerTemplatePart,
+} from './dom-parts.js';
+
 const ELEMENT = 1,
-  FRAGMENT = 11,
   STRING = 0,
   PART = 1;
 
 export const defaultProcessor = {
   processCallback(instance, parts, state) {
     if (!state) return;
-    for (const part of parts) {
-      if (part.expression in state) {
-        const value = state[part.expression];
+    for (const [expression, part] of parts) {
+      if (expression in state) {
+        const value = state[expression];
         // boolean attr
         if (
           typeof value === 'boolean' &&
-          part instanceof AttributeTemplatePart &&
+          part instanceof AttributePart &&
           typeof part.element[part.attributeName] === 'boolean'
         ) {
           part.booleanValue = value;
         } else if (
           typeof value === 'function' &&
-          part instanceof AttributeTemplatePart
+          part instanceof AttributePart
         ) {
           part.element[part.attributeName] = value;
         } else {
@@ -53,122 +55,9 @@ export class TemplateInstance extends DocumentFragment {
   }
 }
 
-export class TemplatePart {
-  constructor(setter, expr) {
-    this.setter = setter;
-    this.expression = expr;
-  }
-  toString() {
-    return this.value;
-  }
-}
-
-export class AttributeTemplatePart extends TemplatePart {
-  #value = '';
-  get attributeName() {
-    return this.setter.attr.name;
-  }
-  get attributeNamespace() {
-    return this.setter.attr.namespaceURI;
-  }
-  get element() {
-    return this.setter.element;
-  }
-  get value() {
-    return this.#value;
-  }
-  set value(newValue) {
-    if (this.#value === newValue) return; // save unnecessary call
-    this.#value = newValue;
-    const { attr, element, parts } = this.setter;
-    if (parts.length === 1) {
-      // fully templatized
-      if (newValue == null)
-        element.removeAttributeNS(attr.namespaceURI, attr.name);
-      else element.setAttributeNS(attr.namespaceURI, attr.name, newValue);
-    } else element.setAttributeNS(attr.namespaceURI, attr.name, parts.join(''));
-  }
-  get booleanValue() {
-    return this.setter.element.hasAttributeNS(this.attributeNamespace, this.setter.attr.name);
-  }
-  set booleanValue(value) {
-    if (this.setter.parts.length === 1) this.value = value ? '' : null;
-    else throw new DOMException('Value is not fully templatized');
-  }
-}
-
-export class NodeTemplatePart extends TemplatePart {
-  #nodes = [this.setter.parts?.[0] ?? new Text()];
-  get replacementNodes() {
-    return this.#nodes;
-  }
-  get parentNode() {
-    return this.setter.parentNode;
-  }
-  get nextSibling() {
-    return this.#nodes[this.#nodes.length - 1].nextSibling;
-  }
-  get previousSibling() {
-    return this.#nodes[0].previousSibling;
-  }
-  // FIXME: not sure why do we need string serialization here? Just because parent class has type DOMString?
-  get value() {
-    return this.#nodes.map((node) => node.textContent).join('');
-  }
-  set value(newValue) {
-    this.replace(newValue);
-  }
-  replace(...nodes) {
-    // replace current nodes with new nodes.
-    const normalisedNodes = nodes
-      .flat()
-      .flatMap((node) =>
-        node == null
-          ? [new Text()]
-          : node.forEach
-          ? [...node]
-          : node.nodeType === FRAGMENT
-          ? [...node.childNodes]
-          : node.nodeType
-          ? [node]
-          : [new Text(node)]
-      );
-    if (!normalisedNodes.length) normalisedNodes.push(new Text(''));
-    this.#nodes[0].before(...normalisedNodes);
-    for (const oldNode of this.#nodes) {
-      if (!normalisedNodes.includes(oldNode)) oldNode.remove();
-    }
-    this.#nodes = normalisedNodes;
-  }
-  replaceHTML(html) {
-    const fragment = this.parentNode.cloneNode();
-    fragment.innerHTML = html;
-    this.replace(fragment.childNodes);
-  }
-}
-
-export class InnerTemplatePart extends NodeTemplatePart {
-  directive;
-  constructor(setter, template) {
-    let directive =
-      template.getAttribute('directive') || template.getAttribute('type');
-    let expression =
-      template.getAttribute('expression') ||
-      template.getAttribute(directive) ||
-      '';
-    if (expression.startsWith('{{'))
-      expression = expression.trim().slice(2, -2).trim();
-
-    super(setter, expression);
-
-    this.template = template;
-    this.directive = directive;
-  }
-}
-
 // collect element parts
 export const parse = (element, parts = []) => {
-  let attr, node, setter, type, value;
+  let attr, node, setter, type, value, part;
 
   for (attr of element.attributes || []) {
     if (attr.value.includes('{{')) {
@@ -176,9 +65,9 @@ export const parse = (element, parts = []) => {
       for ([type, value] of tokenize(attr.value)) {
         if (!type) setter.parts.push(value);
         else {
-          value = new AttributeTemplatePart(setter, value);
-          setter.parts.push(value);
-          parts.push(value);
+          part = new AttributePart(setter);
+          setter.parts.push(part);
+          parts.push([value, part]);
         }
       }
       attr.value = setter.parts.join('');
@@ -197,14 +86,14 @@ export const parse = (element, parts = []) => {
           for ([type, value] of tokenize(node.data))
             if (!type) nodes.push(new Text(value));
             else {
-              value = new NodeTemplatePart(setter, value);
-              nodes.push(value);
-              parts.push(value);
+              part = new ChildNodePart(setter);
+              nodes.push(part);
+              parts.push([value, part]);
             }
         } else {
-          value = new InnerTemplatePart(setter, node);
-          nodes.push(value);
-          parts.push(value);
+          part = new InnerTemplatePart(setter, node);
+          nodes.push(part);
+          parts.push([part.expression, part]);
         }
 
         node.replaceWith(

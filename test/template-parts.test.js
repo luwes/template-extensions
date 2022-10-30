@@ -1,11 +1,8 @@
 /* Adapted from https://github.com/dy/template-parts - ISC - Dmitry Iv. */
 
 import { assert } from '@open-wc/testing';
-import {
-  TemplateInstance,
-  AttributeTemplatePart,
-  tokenize,
-} from '../src/template-parts.js';
+import { TemplateInstance, tokenize } from '../src/template-instance.js';
+import { AttributePart } from '../src/dom-parts.js';
 
 const test = it;
 const is = assert.deepEqual;
@@ -310,14 +307,14 @@ const propertyIdentityOrBooleanAttribute = {
 
   processCallback(instance, parts, params) {
     if (typeof params !== 'object' || !params) return;
-    for (const part of parts) {
-      if (part.expression in params) {
-        const value = params[part.expression] ?? '';
+    for (const [expression, part] of parts) {
+      if (expression in params) {
+        const value = params[expression] ?? '';
 
         // boolean attr
         if (
           typeof value === 'boolean' &&
-          part instanceof AttributeTemplatePart &&
+          part instanceof AttributePart &&
           typeof part.element[part.attributeName] === 'boolean'
         )
           part.booleanValue = value;
@@ -450,9 +447,9 @@ test('update: replaces an empty replace() call with an empty text node', () => {
       },
       processCallback(instance, parts, params) {
         if (typeof params !== 'object' || !params) return;
-        for (const part of parts) {
-          if (part.expression in params) {
-            const value = params[part.expression] ?? '';
+        for (const [expression, part] of parts) {
+          if (expression in params) {
+            const value = params[expression] ?? '';
             part.replace();
             part.replace();
             part.replace();
@@ -548,7 +545,7 @@ test('innerTemplatePart: full form', () => {
     template,
     { x: ['x', 'y'] },
     {
-      processCallback(el, [part], state) {
+      processCallback(el, [[, part]], state) {
         arr.push(part.directive);
         arr.push(part.expression);
         const nodes = state[part.expression].map(
@@ -569,7 +566,7 @@ test('attr: updates the given attribute from partList when updateParent is calle
   const el = document.createElement('div');
   const attr = document.createAttribute('class');
   const instance = { element: el, attr, parts: [] }; //new AttributeValueSetter(el, attr)
-  const part = new AttributeTemplatePart(instance);
+  const part = new AttributePart(instance);
   instance.parts = [part];
   part.value = 'foo';
   is(el.getAttribute('class'), 'foo');
@@ -580,8 +577,8 @@ test('attr: updates the AttributeValue which updates the Attr whenever it receiv
   const attr = document.createAttribute('class');
   const instance = { element: el, attr, parts: [] }; //new AttributeValueSetter(el, attr)
   instance.parts = [
-    new AttributeTemplatePart(instance),
-    new AttributeTemplatePart(instance),
+    new AttributePart(instance),
+    new AttributePart(instance),
   ];
   instance.parts[0].value = 'hello';
   instance.parts[1].value = ' world'; // NOTE: space here
@@ -595,7 +592,7 @@ test('attr: updates boolean attr', () => {
   const el = document.createElement('div');
   const attr = document.createAttribute('hidden');
   const instance = { element: el, attr, parts: [] };
-  instance.parts = [new AttributeTemplatePart(instance)];
+  instance.parts = [new AttributePart(instance)];
   instance.parts[0].booleanValue = false;
   is(el.hasAttribute('hidden'), false);
   is(instance.parts[0].booleanValue, false);
@@ -624,9 +621,9 @@ const processor = {
 
   processCallback(instance, parts, params) {
     if (typeof params !== 'object' || !params) return;
-    for (const part of parts) {
-      if (part.expression in params) {
-        const value = params[part.expression] ?? '';
+    for (const [expression, part] of parts) {
+      if (expression in params) {
+        const value = params[expression] ?? '';
         part.value = value;
         this.processCalls++;
       }
