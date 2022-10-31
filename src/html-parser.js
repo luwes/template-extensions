@@ -140,7 +140,7 @@ export function build(statics) {
           if (mode === MODE_TEXT) {
             commit();
           }
-          commit(exprBuffer);
+          commit(exprBuffer.trim());
           exprBuffer = '';
           j++;
         } else {

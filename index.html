@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <title>Template Extensions</title>
+</head>
+<body>
+  <script type="module">
+    import { enhance, html } from './html-enhancer.js';
+
+    class MyCounter extends HTMLElement {
+      static observedAttributes = ['count'];
+
+      constructor() {
+        super();
+        if (!this.shadowRoot) {
+          this.attachShadow({ mode: 'open' });
+        }
+      }
+
+      get count() {
+        return +this.getAttribute('count');
+      }
+
+      set count(val) {
+        this.setAttribute('count', val);
+      }
+
+      attributeChangedCallback(name, oldVal, newVal) {
+        this.render();
+      }
+
+      render() {
+        enhance(html`
+          <div>
+            <h2>Header 2</h2>
+            <i>Cursive ${'<20>'} yea</i>
+          </div>
+          <div>
+            <h1 class="${'headline' + this.count}">Counter</h1>
+            <p>${this.count}</p>
+            ${html`
+              <div>
+                <button onclick="${() => (this.count += 1)}">+</button>
+                <button onclick="${() => (this.count -= 1)}">-</button>
+              </div>
+            `}
+          </div>
+        `, this.shadowRoot);
+      }
+    }
+    customElements.define('my-counter', MyCounter);
+  </script>
+
+  <my-counter count="7">
+    <template shadowroot="open">
+      <div>
+        <h2>Header 2</h2>
+        <i>Cursive &lt;20&gt; yea</i>
+      </div>
+      <div>
+        <h1 class="headline7">Counter</h1>
+        <p>7</p>
+        <div>
+          <button>+</button>
+          <button>-</button>
+        </div>
+      </div>
+    </template>
+  </my-counter>
+</body>
+</html>

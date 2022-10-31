@@ -6,7 +6,7 @@ which is covered by the API's based on the
 and [DOM Parts](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/DOM-Parts.md)
 proposals.
 
-## TODO
+## WIP
 
 In addition it adds new API's to enhance existing elements with these dynamic parts.
 
@@ -17,3 +17,4 @@ The template instance and DOM parts code is based on the great work of
 
 - https://github.com/dy/template-parts
 - https://github.com/github/template-parts
+- https://github.com/github/jtml
