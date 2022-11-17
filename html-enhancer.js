@@ -1,7 +1,4 @@
 /* Adapted from https://github.com/github/jtml - MIT - Keith Cirkel */
-/*
-  - TODO: add support for element enhancement (hydration)
- */
 
 import {
   TemplateInstance,
@@ -22,43 +19,42 @@ export function html(strings, ...values) {
   return new TemplateResult(strings, values, defaultProcessor);
 }
 
-const templates = new WeakMap();
+const templateCache = new WeakMap();
+const htmlCache = new WeakMap();
 const renderedTemplates = new WeakMap();
 const renderedTemplateInstances = new WeakMap();
 
 class TemplateResult {
-  #strings;
-  #values;
+  strings;
+  values;
   #processor;
 
   constructor(strings, values, processor) {
-    this.#strings = strings;
-    this.#values = values;
+    this.strings = strings;
+    this.values = values;
     this.#processor = processor;
   }
 
-  get enhanceTemplate() {
-    if (templates.has(this.#strings)) {
-      return templates.get(this.#strings);
+  get templateHTML() {
+    if (htmlCache.has(this.strings)) {
+      return htmlCache.get(this.strings);
     } else {
-      const end = this.#strings.length - 1;
-      const template = this.#strings.reduce(
-        (str, cur, i) => str + cur + (i < end ? `{{${i}}}` : ''),
-        ''
-      );
-      templates.set(this.#strings, template);
-      return template;
+      let html = this.strings[0];
+      for (let i = 0; i < this.values.length; i++)
+        html += `{{${i}}}` + this.strings[i + 1];
+      htmlCache.set(this.strings, html);
+      return html;
     }
   }
 
   enhanceInto(element) {
-    const template = this.enhanceTemplate;
+    const template = this.template;
     if (renderedTemplates.get(element) !== template) {
       renderedTemplates.set(element, template);
       const instance = new AssignedTemplateInstance(
         element,
         template,
-        this.#values,
+        this.values,
         this.#processor
       );
       renderedTemplateInstances.set(element, instance);
@@ -66,32 +62,28 @@ class TemplateResult {
     }
     const templateInstance = renderedTemplateInstances.get(element);
     if (templateInstance) {
-      templateInstance.update(this.#values);
+      templateInstance.update(this.values);
     }
   }
 
-  get renderTemplate() {
-    if (templates.has(this.#strings)) {
-      return templates.get(this.#strings);
+  get template() {
+    if (templateCache.has(this.strings)) {
+      return templateCache.get(this.strings);
     } else {
       const template = document.createElement('template');
-      const end = this.#strings.length - 1;
-      template.innerHTML = this.#strings.reduce(
-        (str, cur, i) => str + cur + (i < end ? `{{${i}}}` : ''),
-        ''
-      );
-      templates.set(this.#strings, template);
+      template.innerHTML = this.templateHTML;
+      templateCache.set(this.strings, template);
       return template;
     }
   }
 
   renderInto(element) {
-    const template = this.renderTemplate;
+    const template = this.template;
     if (renderedTemplates.get(element) !== template) {
       renderedTemplates.set(element, template);
       const instance = new TemplateInstance(
         template,
-        this.#values,
+        this.values,
         this.#processor
       );
       renderedTemplateInstances.set(element, instance);
@@ -105,8 +97,16 @@ class TemplateResult {
     }
     const templateInstance = renderedTemplateInstances.get(element);
     if (templateInstance) {
-      templateInstance.update(this.#values);
+      templateInstance.update(this.values);
     }
+  }
+
+  toString() {
+    let html = this.strings[0];
+    for (let i = 0; i < this.values.length; i++) {
+      html += escapeHtml(this.values[i]) + this.strings[i + 1];
+    }
+    return html;
   }
 }
 
@@ -116,30 +116,35 @@ const defaultProcessor = {
     for (const [expression, part] of parts) {
       if (expression in state) {
         const value = state[expression];
-        processSubTemplate(part, value) ||
-          processBooleanAttribute(part, value) ||
-          processFunctionAttribute(part, value) ||
-          processPropertyIdentity(part, value);
+        processSubTemplate(instance, part, value) ||
+          processBooleanAttribute(instance, part, value) ||
+          processFunctionAttribute(instance, part, value) ||
+          processIterable(instance, part, value) ||
+          processPropertyIdentity(instance, part, value);
       }
     }
   },
 };
 
-function processSubTemplate(part, value) {
+function processSubTemplate(instance, part, value) {
   if (value instanceof TemplateResult && part instanceof ChildNodePart) {
-    value.enhanceInto(part);
+    if (instance.assign) {
+      value.enhanceInto(part.parentNode);
+    } else {
+      value.renderInto(part);
+    }
     return true;
   }
 }
 
-function processFunctionAttribute(part, value) {
+function processFunctionAttribute(instance, part, value) {
   if (typeof value === 'function' && part instanceof AttrPart) {
     part.element[part.attributeName] = value;
     return true;
   }
 }
 
-function processBooleanAttribute(part, value) {
+function processBooleanAttribute(instance, part, value) {
   if (
     typeof value === 'boolean' &&
     part instanceof AttrPart
@@ -155,7 +160,7 @@ function processBooleanAttribute(part, value) {
   }
 }
 
-export function processPropertyIdentity(part, value) {
+function processPropertyIdentity(instance, part, value) {
   if (part instanceof AttrPart) {
     const ns = part.attributeNamespace;
     const oldValue = part.element.getAttributeNS(ns, part.attributeName);
@@ -164,6 +169,59 @@ export function processPropertyIdentity(part, value) {
     }
     return true;
   }
-  part.value = String(value);
+  if (String(value) !== part.value) {
+    part.value = String(value);
+  }
   return true;
+}
+
+function isIterable(value) {
+  return typeof value === 'object' && Symbol.iterator in value;
+}
+
+function processIterable(instance, part, value) {
+  if (!isIterable(value)) return false;
+  if (part instanceof ChildNodePart) {
+    const nodes = [];
+    for (const [i, item] of Object.entries(value)) {
+      if (item instanceof TemplateResult) {
+        if (instance.assign) {
+          item.enhanceInto({ childNodes: [part.replacementNodes[i]] });
+        } else {
+          const fragment = document.createDocumentFragment();
+          item.renderInto(fragment);
+          nodes.push(...fragment.childNodes);
+        }
+      } else if (item instanceof DocumentFragment) {
+        if (instance.assign) {
+          // todo fix
+        } else {
+          nodes.push(...item.childNodes);
+        }
+      } else {
+        if (instance.assign) {
+          // todo fix
+        } else {
+          nodes.push(String(item));
+        }
+      }
+    }
+    if (nodes.length) part.replace(...nodes);
+    return true;
+  } else {
+    part.value = Array.from(value).join(' ');
+    return true;
+  }
+}
+
+const replacements = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&apos;',
+};
+
+function escapeHtml(val) {
+  return `${val}`.replace(/[&<>"']/g, (char) => replacements[char]);
 }

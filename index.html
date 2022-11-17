@@ -7,67 +7,65 @@
 </head>
 <body>
   <script type="module">
-    import { enhance, html } from './html-enhancer.js';
+    import { render, enhance, html } from './dist/html-enhancer.js';
 
-    class MyCounter extends HTMLElement {
-      static observedAttributes = ['count'];
-
-      constructor() {
-        super();
-        if (!this.shadowRoot) {
-          this.attachShadow({ mode: 'open' });
-        }
-      }
-
-      get count() {
-        return +this.getAttribute('count');
-      }
-
-      set count(val) {
-        this.setAttribute('count', val);
-      }
-
-      attributeChangedCallback(name, oldVal, newVal) {
-        this.render();
-      }
-
-      render() {
-        enhance(html`
-          <div>
-            <h2>Header 2</h2>
-            <i>Cursive ${'<20>'} yea</i>
-          </div>
-          <div>
-            <h1 class="${'headline' + this.count}">Counter</h1>
-            <p>${this.count}</p>
-            ${html`
-              <div>
-                <button onclick="${() => (this.count += 1)}">+</button>
-                <button onclick="${() => (this.count -= 1)}">-</button>
-              </div>
-            `}
-          </div>
-        `, this.shadowRoot);
-      }
+    const run = (props) => {
+      console.time('enhance');
+      enhance(getTemplate(props), window.container);
+      console.timeEnd('enhance');
     }
-    customElements.define('my-counter', MyCounter);
+    run({ count: 7 });
+
+    function getTemplate({ count }) {
+      return html`
+        <div>
+          <h1 class="${'headline' + count}">Counter</h1>
+          <p> yo ${count}${count}</p>
+          lala
+          ${count > 7 ? html`<div>higher baby</div>` : html`<div>7 on the nose</div>`}
+          <div>
+            <button onclick="${() => run({ count: count+1 })}">+</button>
+            <button onclick="${() => run({ count: count-1 })}">-</button>
+          </div>
+          ${[1, 2].map((i) => {
+            return html`<div class="c${i + count - 7}t${count}">${i + count}</div>`;
+          })}
+        </div>
+        ${count}
+      `;
+    }
   </script>
 
-  <my-counter count="7">
-    <template shadowroot="open">
+  <div id="container">
+    <div>
+      <h1 class="headline7">Counter</h1>
+      <p>yo 77</p>
+      lala
+      <div>7 on the nose</div>
       <div>
-        <h2>Header 2</h2>
-        <i>Cursive &lt;20&gt; yea</i>
+        <button>+</button>
+        <button>-</button>
       </div>
-      <div>
-        <h1 class="headline7">Counter</h1>
-        <p>7</p>
-        <div>
-          <button>+</button>
-          <button>-</button>
-        </div>
-      </div>
-    </template>
-  </my-counter>
+      <div class="c1t7">8</div>
+      <div class="c2t7">9</div>
+    </div>
+    7
+  </div>
+
+<!--   <script>
+  (function attachShadowRoots(root) {
+    if (HTMLTemplateElement.prototype.hasOwnProperty('shadowRoot')) return;
+    console.log('polyfill declarative shadow dom');
+
+    root.querySelectorAll("template[shadowroot]").forEach(template => {
+      const mode = template.getAttribute("shadowroot");
+      const shadowRoot = template.parentNode.attachShadow({ mode });
+      shadowRoot.appendChild(template.content);
+      template.remove();
+      attachShadowRoots(shadowRoot);
+    });
+  })(document);
+  </script> -->
+
 </body>
 </html>

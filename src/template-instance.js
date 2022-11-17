@@ -45,8 +45,15 @@ export class TemplateInstance extends DocumentFragment {
   #processor;
   constructor(template, state, processor = defaultProcessor) {
     super();
+
+    // console.time('template.cloneNode');
     this.append(template.content.cloneNode(true));
+    // console.timeEnd('template.cloneNode');
+
+    // console.time('parse');
     this.#parts = parse(this);
+    // console.timeEnd('parse');
+
     this.#processor = processor;
     processor.createCallback?.(this, this.#parts, state);
     processor.processCallback(this, this.#parts, state);
@@ -58,12 +65,10 @@ export class TemplateInstance extends DocumentFragment {
 
 // collect element parts
 export const parse = (element, parts = []) => {
-  let type, value;
-
   for (let attr of element.attributes || []) {
     if (attr.value.includes('{{')) {
       const list = new AttrPartList();
-      for ([type, value] of tokenize(attr.value)) {
+      for (let [type, value] of tokenize(attr.value)) {
         if (!type) list.append(value);
         else {
           const part = new AttrPart(element, attr.name, attr.namespaceURI);
@@ -82,13 +87,14 @@ export const parse = (element, parts = []) => {
       if (node.nodeType === ELEMENT || node.data.includes('{{')) {
         const items = [];
         if (node.data) {
-          for ([type, value] of tokenize(node.data))
+          for (let [type, value] of tokenize(node.data)) {
             if (!type) items.push(new Text(value));
             else {
               const part = new ChildNodePart(element);
               items.push(part);
               parts.push([value, part]);
             }
+          }
         } else {
           const part = new InnerTemplatePart(element, node);
           items.push(part);
