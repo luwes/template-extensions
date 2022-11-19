@@ -6,7 +6,7 @@
   "main": "src/index.js",
   "types": "src/types.d.ts",
   "scripts": {
-    "format": "eslint '*.js' --fix",
+    "format": "prettier --write .",
     "test": "web-test-runner **/*test.js --config test/web-test-runner.config.js",
     "dev": "esbuild ./interhtml.js --servedir=. --outdir=dist --bundle --format=esm",
     "build": "esbuild ./interhtml.js --define:self.PROD=true --tree-shaking=true --outdir=dist --minify --bundle --format=esm && yarn size",
@@ -25,6 +25,9 @@
     "esbuild": "^0.15.14",
     "eslint": "^8.24.0",
     "prettier": "^2.7.1"
+  },
+  "prettier": {
+    "singleQuote": true
   },
   "eslintConfig": {
     "env": {

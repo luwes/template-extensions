@@ -1,4 +1,3 @@
-
 export class AssignedTemplateInstance {
   constructor(
     container: HTMLElement | ShadowRoot,

@@ -453,7 +453,7 @@ test('attr: updates the AttributeValue which updates the Attr whenever it receiv
   const list = new AttrPartList();
   list.append(
     new AttrPart(el, attr.name, attr.namespaceURI),
-    new AttrPart(el, attr.name, attr.namespaceURI),
+    new AttrPart(el, attr.name, attr.namespaceURI)
   );
   list.item(0).value = 'hello';
   list.item(1).value = ' world'; // NOTE: space here
