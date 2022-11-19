@@ -103,9 +103,9 @@ test('nodes: should ignore whitespace from server', async () => {
   let tpl = document.createElement('template');
   tpl.innerHTML = `<span>{{ count }}</span> {{ text }} left`;
   let instance = new AssignedTemplateInstance(root, tpl, { count: 10, text: 'items' });
-  is(root.innerHTML, `\n    <span>10</span> items left `);
+  is(root.innerHTML, `\n    <span>10</span>\n    items left\n  `);
   instance.update({ count: 20, text: 'golf balls' });
-  is(root.innerHTML, `\n    <span>20</span> golf balls left `);
+  is(root.innerHTML, `\n    <span>20</span>\n    golf balls left\n  `);
 });
 
 test('nodes: should support mixed child expressions', async () => {
@@ -121,7 +121,7 @@ test('nodes: should support mixed child expressions', async () => {
     location: ' outside',
     sound: 'brrrr'
   });
-  is(root.innerHTML, `10 items <br> left in 40°C outside <br> brrrr`);
+  is(root.innerHTML, ` 10 items <br> left in 40°C outside <br>   brrrr`);
   instance.update({
     count: 20,
     text: ' balls',
@@ -129,7 +129,7 @@ test('nodes: should support mixed child expressions', async () => {
     location: ' inside',
     sound: 'vhhhh'
   });
-  is(root.innerHTML, `20 balls <br> left in 5°C inside <br> vhhhh`);
+  is(root.innerHTML, ` 20 balls <br> left in 5°C inside <br>   vhhhh`);
 });
 
 const propertyIdentityOrBooleanAttribute = {

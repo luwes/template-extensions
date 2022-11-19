@@ -57,6 +57,22 @@ function stringifyValue(value) {
   return value;
 }
 
+function normalizeIndex(data, startIndex) {
+  let index = 0, prevChar;
+  for (let i = 0; i < data.length; i++) {
+    if (!(isWhitespace(data[i]) && isWhitespace(prevChar))) {
+      if (index === startIndex) return i;
+      ++index;
+    }
+    prevChar = data[i];
+  }
+  return startIndex;
+}
+
+function isWhitespace(char) {
+  return char === ' ' || char === '\t' || char === '\n' || char === '\r';
+}
+
 export function createParts(childNodes, selectors, state) {
   const parts = [];
   for (let selector of selectors) {
@@ -69,32 +85,34 @@ export function createParts(childNodes, selectors, state) {
       const exprDetail = exprDetails[i];
       const nodesLength = extractChars(exprDetail, '+', null, true) ?? 1;
       const attrName = extractChars(exprDetail, '[', ']');
-      const textPos = extractChars(exprDetail, '(', ')', true) ?? 0;
       const expr = extractChars(exprDetail, '{', '}');
+      let textPos = extractChars(exprDetail, '(', ')', true) ?? 0;
       let value = state[expr];
 
       if (!attrName) {
         value = stringifyValue(state[expr]);
         let newNode = element;
         if (element.nodeType === 3) {
+          let { data } = element;
           // https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
-          if (!getPreviousContentSibling(element)) {
-            element.data = element.data.trimStart();
+          if (!getPreviousContentSibling(element) && isWhitespace(data[0])) {
+            ++textPos;
           }
-          element.data = element.data.replace(reWhitespace, ' ');
-          if (value !== element.data) {
-            let serverValue = element.data.slice(
-              textPos,
-              textPos + value.length
-            );
+          if (value !== data) {
+            let textLen = value.length;
+            let serverValue = data.slice(textPos, textPos + textLen);
             if (value !== serverValue) {
+              textPos = normalizeIndex(data, textPos);
+              textLen = normalizeIndex(data.slice(textPos), textLen);
+              serverValue = data.slice(textPos, textPos + textLen);
+            }
+            if (!self.PROD && value !== serverValue) {
               console.warn(
                 `Warning: Text content did not match. Server: ${serverValue} Client: ${value}`
               );
             }
-
             newNode = element.splitText(textPos);
-            newNode.splitText(value.length);
+            newNode.splitText(textLen);
           }
           const part = new ChildNodePart(newNode.parentNode, [newNode]);
           parts.push([expr, part]);
@@ -120,7 +138,7 @@ export function createParts(childNodes, selectors, state) {
           serverValue = attr?.value == '';
         }
 
-        if (value != serverValue && `${value}` != serverValue) {
+        if (!self.PROD && value != serverValue && `${value}` != serverValue) {
           console.warn(
             `Warning: Attribute part ${attrName} did not match. Server: ${serverValue} Client: ${value}`
           );
@@ -219,7 +237,7 @@ export function createSelectors(parts) {
     selector += ` ${len}${attributeName}${textOffset}{${expr}}`;
     if (index >= 0) selectors[index] = selector;
     else grouping[path] = selectors.push(selector) - 1;
-    console.warn(selector);
+    // console.warn(selector);
   }
 
   return selectors;
