@@ -1,22 +1,11 @@
-# Template Extensions
-
-The goal of this library is to easily create HTML templates with dynamic parts
-which is covered by the API's based on the
-[Template Instantiation](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md)
-and [DOM Parts](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/DOM-Parts.md)
-proposals.
-
-## AssignedTemplateInstance (naming could change)
-
-```js
-const templateInstance = new AssignedTemplateInstance(container, template, state, processor);
-templateInstance.update(state); // later on
-```
-
-In addition it adds new API's to enhance existing elements with these dynamic parts.
-This allows you to write something like the example below to hydrate SSR / SSG.
-
-```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <title>Template Extensions</title>
+</head>
+<body>
   <script type="module">
     import { render, enhance, html } from './dist/interhtml.js';
 
@@ -66,13 +55,21 @@ This allows you to write something like the example below to hydrate SSR / SSG.
     </div>
     7
   </div>
-```
 
-## Credit
+<!--   <script>
+  (function attachShadowRoots(root) {
+    if (HTMLTemplateElement.prototype.hasOwnProperty('shadowRoot')) return;
+    console.log('polyfill declarative shadow dom');
 
-The template instance and DOM parts code is based on the great work of 
-[Dmitry Iv.](https://github.com/dy) and [Keith Cirkel](https://github.com/keithamus).
+    root.querySelectorAll("template[shadowroot]").forEach(template => {
+      const mode = template.getAttribute("shadowroot");
+      const shadowRoot = template.parentNode.attachShadow({ mode });
+      shadowRoot.appendChild(template.content);
+      template.remove();
+      attachShadowRoots(shadowRoot);
+    });
+  })(document);
+  </script> -->
 
-- https://github.com/dy/template-parts
-- https://github.com/github/template-parts
-- https://github.com/github/jtml
+</body>
+</html>
