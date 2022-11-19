@@ -12,6 +12,109 @@ test('hydrates div with children', async () => {
   is(root.innerHTML, `<div><b>7</b></div>`);
 });
 
+test('hydrate w/ observables bug', async function () {
+  const root = await fixture(`<main>
+    <div class="box level">
+      <div class="level-item">
+        <button class="button">-</button>
+      </div>
+      <div class="level-item">
+        <h1 class="title">0</h1>
+      </div>
+      <div class="level-item">
+        <button class="button">+</button>
+      </div>
+    </div>
+  </main>`);
+
+  let count = 0;
+  const down = () => run(--count);
+  const up = () => run(++count);
+
+  const run = (count) =>
+    enhance(
+      html`
+        <div class="box level">
+          <div class="level-item">
+            <button class="button" onclick="${down}">-</button>
+          </div>
+          <div class="level-item">
+            <h1 class="title">${count}</h1>
+          </div>
+          <div class="level-item">
+            <button class="button" onclick="${up}">+</button>
+          </div>
+        </div>
+      `,
+      root
+    );
+  run(0);
+
+  root.querySelectorAll('.button')[0].click();
+  is(root.querySelector('h1').textContent, '-1');
+});
+
+test('hydrate can add conditional observables in content', async function () {
+  const root = await fixture(`
+    <main><div class="hamburger">Pickle Ketchup Cheese Ham</div></main>`);
+
+  const run = (sauce) =>
+    enhance(
+      html`
+        <div class="hamburger">
+          Pickle ${sauce === 'mayo' ? 'Mayo' : 'Ketchup'} Cheese Ham
+        </div>
+      `,
+      root
+    );
+  run('');
+  is(root.innerHTML, `<div class="hamburger">Pickle Ketchup Cheese Ham</div>`);
+  run('mayo');
+  is(root.innerHTML, `<div class="hamburger">Pickle Mayo Cheese Ham</div>`);
+});
+
+test('hydrate can add conditional observables in content w/ newlines', async function () {
+  const root = await fixture(`<main>
+    <div class="hamburger">
+      Pickle
+      Ketchup
+      Cheese
+      Ham
+    </div>
+  </main>`);
+
+  const run = (sauce) =>
+    enhance(
+      html`
+        <div class="hamburger">
+          Pickle
+          ${sauce === 'mayo' ? 'Mayo' : 'Ketchup'}
+          Cheese
+          Ham
+        </div>
+      `,
+      root
+    );
+  run('');
+  is(root.innerHTML, `
+    <div class="hamburger">
+      Pickle
+      Ketchup
+      Cheese
+      Ham
+    </div>
+  `);
+  run('mayo');
+  is(root.innerHTML, `
+    <div class="hamburger">
+      Pickle
+      Mayo
+      Cheese
+      Ham
+    </div>
+  `);
+});
+
 describe('html', () => {
   it('creates new TemplateResults with each call', () => {
     const main = (x = 'foo') => html`<div class="${x}"></div>`;

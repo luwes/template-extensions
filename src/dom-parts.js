@@ -168,17 +168,6 @@ export class ChildNodePart extends Part {
 
     this.#nodes = normalisedNodes;
   }
-  get innerHTML() {
-    return this.#nodes.map((node) => {
-      if (node.nodeType === 3) return node.data;
-      if (node.outerHTML) return node.outerHTML;
-    }).join('');
-  }
-  replaceHTML(html) {
-    const fragment = this.parentNode.cloneNode();
-    fragment.innerHTML = html;
-    this.replace(fragment.childNodes);
-  }
 }
 
 export class InnerTemplatePart extends ChildNodePart {
