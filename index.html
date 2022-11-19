@@ -7,7 +7,7 @@
 </head>
 <body>
   <script type="module">
-    import { render, enhance, html } from './dist/html-enhancer.js';
+    import { render, enhance, html } from './dist/interhtml.js';
 
     const run = (props) => {
       console.time('enhance');
@@ -16,15 +16,17 @@
     }
     run({ count: 7 });
 
-    function getTemplate({ count }) {
+    function getTemplate({ count, disabled = false }) {
       return html`
         <div>
           <h1 class="${'headline' + count}">Counter</h1>
-          <p> yo ${count}${count}</p>
+          <p> ${count}${ count } <br> left in ${count}°C${count} <br>   ${count}</p>
           lala
-          ${count > 7 ? html`<div>higher baby</div>` : html`<div>7 on the nose</div>`}
+          ${count > 7 ? html`<div>higher baby</div>` : html`<div>${count} on the nose</div>`}
+          lala
+          lala
           <div>
-            <button onclick="${() => run({ count: count+1 })}">+</button>
+            <button disabled="${disabled}"" onclick="${() => run({ count: count+1 })}">+</button>
             <button onclick="${() => run({ count: count-1 })}">-</button>
           </div>
           ${[1, 2].map((i) => {
@@ -39,9 +41,11 @@
   <div id="container">
     <div>
       <h1 class="headline7">Counter</h1>
-      <p>yo 77</p>
+      <p> 77 <br> left in 7°C7 <br>   7</p>
       lala
       <div>7 on the nose</div>
+      lala
+      lala
       <div>
         <button>+</button>
         <button>-</button>

@@ -45,14 +45,8 @@ export class TemplateInstance extends DocumentFragment {
   #processor;
   constructor(template, state, processor = defaultProcessor) {
     super();
-
-    // console.time('template.cloneNode');
     this.append(template.content.cloneNode(true));
-    // console.timeEnd('template.cloneNode');
-
-    // console.time('parse');
     this.#parts = parse(this);
-    // console.timeEnd('parse');
 
     this.#processor = processor;
     processor.createCallback?.(this, this.#parts, state);

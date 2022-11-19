@@ -116,9 +116,10 @@ const defaultProcessor = {
     for (const [expression, part] of parts) {
       if (expression in state) {
         const value = state[expression];
-        processSubTemplate(instance, part, value) ||
-          processBooleanAttribute(instance, part, value) ||
-          processFunctionAttribute(instance, part, value) ||
+        processBooleanAttribute(instance, part, value) ||
+          processEvent(instance, part, value) ||
+          processSubTemplate(instance, part, value) ||
+          processDocumentFragment(instance, part, value) ||
           processIterable(instance, part, value) ||
           processPropertyIdentity(instance, part, value);
       }
@@ -137,11 +138,32 @@ function processSubTemplate(instance, part, value) {
   }
 }
 
-function processFunctionAttribute(instance, part, value) {
-  if (typeof value === 'function' && part instanceof AttrPart) {
-    part.element[part.attributeName] = value;
+export function processDocumentFragment(instance, part, value) {
+  if (value instanceof DocumentFragment && part instanceof ChildNodePart) {
+    if (value.childNodes.length) part.replace(...value.childNodes);
     return true;
   }
+  return false;
+}
+
+function processEvent(instance, part, value) {
+  if (part instanceof AttrPart && part.attributeName.startsWith('on')) {
+    let name = part.attributeName.slice(2).toLowerCase();
+
+    if (value) {
+      part.element.addEventListener(name, eventProxy);
+    } else {
+      part.element.removeEventListener(name, eventProxy);
+    }
+
+    (part.element._listeners || (part.element._listeners = {}))[name] = value;
+    part.element.removeAttributeNS(part.attributeNamespace, part.attributeName);
+    return true;
+  }
+}
+
+function eventProxy(e) {
+  return this._listeners && this._listeners[e.type](e);
 }
 
 function processBooleanAttribute(instance, part, value) {
@@ -160,7 +182,7 @@ function processBooleanAttribute(instance, part, value) {
   }
 }
 
-function processPropertyIdentity(instance, part, value) {
+export function processPropertyIdentity(instance, part, value) {
   if (part instanceof AttrPart) {
     const ns = part.attributeNamespace;
     const oldValue = part.element.getAttributeNS(ns, part.attributeName);
@@ -183,7 +205,8 @@ function processIterable(instance, part, value) {
   if (!isIterable(value)) return false;
   if (part instanceof ChildNodePart) {
     const nodes = [];
-    for (const [i, item] of Object.entries(value)) {
+    let i = 0;
+    for (const item of value) {
       if (item instanceof TemplateResult) {
         if (instance.assign) {
           item.enhanceInto({ childNodes: [part.replacementNodes[i]] });
@@ -205,6 +228,7 @@ function processIterable(instance, part, value) {
           nodes.push(String(item));
         }
       }
+      ++i;
     }
     if (nodes.length) part.replace(...nodes);
     return true;

@@ -71,9 +71,10 @@ export function createParts(childNodes, selectors, state) {
       const attrName = extractChars(exprDetail, '[', ']');
       const textPos = extractChars(exprDetail, '(', ')', true) ?? 0;
       const expr = extractChars(exprDetail, '{', '}');
-      let value = stringifyValue(state[expr]);
+      let value = state[expr];
 
       if (!attrName) {
+        value = stringifyValue(state[expr]);
         let newNode = element;
         if (element.nodeType === 3) {
           // https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
@@ -81,36 +82,60 @@ export function createParts(childNodes, selectors, state) {
             element.data = element.data.trimStart();
           }
           element.data = element.data.replace(reWhitespace, ' ');
-          if (
-            value !== element.data &&
-            value === element.data.slice(textPos, textPos + value.length)
-          ) {
+          if (value !== element.data) {
+            let serverValue = element.data.slice(
+              textPos,
+              textPos + value.length
+            );
+            if (value !== serverValue) {
+              console.warn(
+                `Warning: Text content did not match. Server: ${serverValue} Client: ${value}`
+              );
+            }
+
             newNode = element.splitText(textPos);
             newNode.splitText(value.length);
           }
           const part = new ChildNodePart(newNode.parentNode, [newNode]);
           parts.push([expr, part]);
         } else {
-          let nodes = getNextChildNodes(element, nodesLength);
+          const nodes = getNextChildNodes(element, nodesLength);
           const part = new ChildNodePart(nodes[0].parentNode, nodes);
           parts.push([expr, part]);
         }
       } else if (attrName) {
-        const valueLength = ('' + value).length;
+        if (typeof state[expr] === 'function') value = undefined;
+
         const attr = element.attributes.getNamedItem(attrName);
         const startPos = textPos;
         const list = attrLists[path + attrName] ?? new AttrPartList();
         attrLists[path + attrName] = list;
         if (startPos > 0) {
-          list.append(attr?.value.slice(('' + list).length, startPos));
+          list.append(attr?.value.slice(`${list}`.length, startPos));
         }
 
-        const partValue = attr?.value.slice(startPos, startPos + valueLength);
-        const part = new AttrPart(element, attrName, attr?.namespaceURI, partValue);
+        const valueLength = ('' + value).length;
+        let serverValue = attr?.value.slice(startPos, startPos + valueLength);
+        if (typeof value === 'boolean' && !attr?.value?.length) {
+          serverValue = attr?.value == '';
+        }
+
+        if (value != serverValue && `${value}` != serverValue) {
+          console.warn(
+            `Warning: Attribute part ${attrName} did not match. Server: ${serverValue} Client: ${value}`
+          );
+        }
+
+        const part = new AttrPart(element, attrName, attr?.namespaceURI, value);
         parts.push([expr, part]);
         list.append(part);
-        if (i === exprDetails.length - 1) {
-          list.append(attr?.value.slice(('' + list).length));
+
+        const exprLength = exprDetails.filter((e) =>
+          e.startsWith(`[${attrName}]`)
+        ).length;
+        if (i === exprLength - 1) {
+          const suffix = attr?.value.slice(`${list}`.length);
+          if (suffix) list.append(suffix);
         }
       }
     }
@@ -189,7 +214,7 @@ export function createSelectors(parts) {
     textOffset = textOffset ? `(${textOffset})` : '';
     attributeName = attributeName ? `[${attributeName}]` : '';
 
-    let index = grouping[path];
+    const index = grouping[path];
     let selector = index >= 0 ? selectors[index] : path;
     selector += ` ${len}${attributeName}${textOffset}{${expr}}`;
     if (index >= 0) selectors[index] = selector;
