@@ -32,7 +32,7 @@ existing elements (from SSR/SSG) with these dynamic parts.
 ## Classes
 
 ```ts
-export class AssignedTemplateInstance extends DocumentFragment {
+export class AssignedTemplateInstance {
   constructor(
     container: HTMLElement | ShadowRoot,
     template: HTMLTemplateElement,
