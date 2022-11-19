@@ -1,4 +1,14 @@
 
+export class AssignedTemplateInstance {
+  constructor(
+    container: HTMLElement | ShadowRoot,
+    template: HTMLTemplateElement,
+    params: unknown,
+    processor?: TemplateTypeInit
+  );
+  update(params: unknown): void;
+}
+
 export class TemplateInstance extends DocumentFragment {
   constructor(
     template: HTMLTemplateElement,
