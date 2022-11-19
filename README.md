@@ -6,71 +6,92 @@ which is covered by the API's based on the
 and [DOM Parts](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/DOM-Parts.md)
 proposals.
 
-## AssignedTemplateInstance (naming could change)
+In addition it adds new API's to progressively enhance
+existing elements (from SSR/SSG) with these dynamic parts.
 
-```js
-const templateInstance = new AssignedTemplateInstance(container, template, state, processor);
-templateInstance.update(state); // later on
-```
+## Examples
 
-In addition it adds new API's to enhance existing elements with these dynamic parts.
-This allows you to write something like the example below to hydrate SSR / SSG.
+### Simple JS render example
 
 ```html
-  <script type="module">
-    import { render, enhance, html } from './dist/interhtml.js';
+<template id="info">
+  <section>
+    <h1>{{name}}</h1>
+    Email: <a href="mailto:{{email}}">{{email}}</a>
+  </section>
+</template>
+<script>
+  const params = { name: 'Ryosuke Niwa', email: 'rniwa@webkit.org' };
+  const content = new TemplateInstance(info, params);
+  document.body.append(content);
+  // later on
+  content.update({ name: 'Ryosuke Niwa', email: 'rniwa@apple.com' });
+</script>
+```
 
-    const run = (props) => {
-      console.time('enhance');
-      enhance(getTemplate(props), window.container);
-      console.timeEnd('enhance');
-    }
-    run({ count: 7 });
+## Classes
 
-    function getTemplate({ count, disabled = false }) {
-      return html`
-        <div>
-          <h1 class="${'headline' + count}">Counter</h1>
-          <p> ${count}${ count } <br> left in ${count}°C${count} <br>   ${count}</p>
-          lala
-          ${count > 7 ? html`<div>higher baby</div>` : html`<div>${count} on the nose</div>`}
-          lala
-          lala
-          <div>
-            <button disabled="${disabled}" onclick="${() => run({ count: count+1 })}">+</button>
-            <button onclick="${() => run({ count: count-1 })}">-</button>
-          </div>
-          ${[1, 2].map((i) => {
-            return html`<div class="c${i + count - 7}t${count}">${i + count}</div>`;
-          })}
-        </div>
-        ${count}
-      `;
-    }
-  </script>
+```ts
+export class AssignedTemplateInstance extends DocumentFragment {
+  constructor(
+    container: HTMLElement | ShadowRoot,
+    template: HTMLTemplateElement,
+    params: unknown,
+    processor?: TemplateTypeInit
+  );
+  update(params: unknown): void;
+}
 
-  <div id="container">
-    <div>
-      <h1 class="headline7">Counter</h1>
-      <p> 77 <br> left in 7°C7 <br>   7</p>
-      lala
-      <div>7 on the nose</div>
-      lala
-      lala
-      <div>
-        <button>+</button>
-        <button>-</button>
-      </div>
-      <div class="c1t7">8</div>
-      <div class="c2t7">9</div>
-    </div>
-    7
-  </div>
+export class TemplateInstance extends DocumentFragment {
+  constructor(
+    template: HTMLTemplateElement,
+    params: unknown,
+    processor?: TemplateTypeInit
+  );
+  update(params: unknown): void;
+}
+
+type Expression = string;
+
+type TemplateProcessCallback = (
+  instance: TemplateInstance,
+  parts: Iterable<[Expression, Part]>,
+  params: unknown
+) => void;
+
+export type TemplateTypeInit = {
+  processCallback: TemplateProcessCallback;
+  createCallback?: TemplateProcessCallback;
+};
+
+export interface Part {
+  value: string | null;
+}
+
+export class AttrPart implements Part {
+  constructor(element: Element, attributeName: string, namespaceURI?: string);
+  get attributeName(): string;
+  get attributeNamespace(): string | null;
+  get value(): string | null;
+  set value(value: string | null);
+  get element(): Element;
+  get booleanValue(): boolean;
+  set booleanValue(value: boolean);
+}
+
+export class ChildNodePart implements Part {
+  constructor(parentNode: Element, nodes: Node[]);
+  get value(): string;
+  set value(string: string);
+  get previousSibling(): ChildNode | null;
+  get nextSibling(): ChildNode | null;
+  replace(...nodes: Array<string | ChildNode>): void;
+}
 ```
 
 ## Credit
 
-The template instance and DOM parts code is based on the great work of 
+The template instance and DOM parts code is based on the great work of
 [Dmitry Iv.](https://github.com/dy) and [Keith Cirkel](https://github.com/keithamus).
 
 - https://github.com/dy/template-parts
