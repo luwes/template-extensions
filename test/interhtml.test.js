@@ -87,32 +87,35 @@ test('hydrate can add conditional observables in content w/ newlines', async fun
     enhance(
       html`
         <div class="hamburger">
-          Pickle
-          ${sauce === 'mayo' ? 'Mayo' : 'Ketchup'}
-          Cheese
-          Ham
+          Pickle ${sauce === 'mayo' ? 'Mayo' : 'Ketchup'} Cheese Ham
         </div>
       `,
       root
     );
   run('');
-  is(root.innerHTML, `
+  is(
+    root.innerHTML,
+    `
     <div class="hamburger">
       Pickle
       Ketchup
       Cheese
       Ham
     </div>
-  `);
+  `
+  );
   run('mayo');
-  is(root.innerHTML, `
+  is(
+    root.innerHTML,
+    `
     <div class="hamburger">
       Pickle
       Mayo
       Cheese
       Ham
     </div>
-  `);
+  `
+  );
 });
 
 describe('html', () => {

@@ -1,3 +1,4 @@
+/* Example UI library (InterHTML) that can be built with Template Extensions */
 /* Adapted from https://github.com/github/jtml - MIT - Keith Cirkel */
 
 import {
@@ -117,6 +118,7 @@ const defaultProcessor = {
       if (expression in state) {
         const value = state[expression];
         processBooleanAttribute(instance, part, value) ||
+          processInput(instance, part, value) ||
           processEvent(instance, part, value) ||
           processSubTemplate(instance, part, value) ||
           processDocumentFragment(instance, part, value) ||
@@ -179,6 +181,16 @@ function processBooleanAttribute(instance, part, value) {
       part.booleanValue = value;
     }
     return true;
+  }
+}
+
+function processInput(instance, part, value) {
+  if (
+    part instanceof AttrPart &&
+    part.element.localName === 'input' &&
+    part.attributeName === 'value'
+  ) {
+    part.element.value = value;
   }
 }
 

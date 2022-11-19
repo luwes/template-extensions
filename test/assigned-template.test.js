@@ -66,7 +66,9 @@ test('create: can render into partial attribute nodes', async () => {
 });
 
 test('create: can render into many values', async () => {
-  const root = await fixture(`<main><div class="my-foo-state bar">baz</div></main>`);
+  const root = await fixture(
+    `<main><div class="my-foo-state bar">baz</div></main>`
+  );
   const template = document.createElement('template');
   const originalHTML = `<div class="my-{{x}}-state {{y}}">{{z}}</div>`;
   template.innerHTML = originalHTML;
@@ -89,7 +91,10 @@ test('nodes: should preserve spaces', async () => {
   const root = await fixture(`<main><span>10</span> items left</main>`);
   let tpl = document.createElement('template');
   tpl.innerHTML = `<span>{{ count }}</span> {{ text }} left`;
-  let instance = new AssignedTemplateInstance(root, tpl, { count: 10, text: 'items' });
+  let instance = new AssignedTemplateInstance(root, tpl, {
+    count: 10,
+    text: 'items',
+  });
   is(root.innerHTML, `<span>10</span> items left`);
   instance.update({ count: 20, text: 'golf balls' });
   is(root.innerHTML, `<span>20</span> golf balls left`);
@@ -102,7 +107,10 @@ test('nodes: should ignore whitespace from server', async () => {
   </main>`);
   let tpl = document.createElement('template');
   tpl.innerHTML = `<span>{{ count }}</span> {{ text }} left`;
-  let instance = new AssignedTemplateInstance(root, tpl, { count: 10, text: 'items' });
+  let instance = new AssignedTemplateInstance(root, tpl, {
+    count: 10,
+    text: 'items',
+  });
   is(root.innerHTML, `\n    <span>10</span>\n    items left\n  `);
   instance.update({ count: 20, text: 'golf balls' });
   is(root.innerHTML, `\n    <span>20</span>\n    golf balls left\n  `);
@@ -119,7 +127,7 @@ test('nodes: should support mixed child expressions', async () => {
     text: ' items',
     deg: 40,
     location: ' outside',
-    sound: 'brrrr'
+    sound: 'brrrr',
   });
   is(root.innerHTML, ` 10 items <br> left in 40°C outside <br>   brrrr`);
   instance.update({
@@ -127,7 +135,7 @@ test('nodes: should support mixed child expressions', async () => {
     text: ' balls',
     deg: 5,
     location: ' inside',
-    sound: 'vhhhh'
+    sound: 'vhhhh',
   });
   is(root.innerHTML, ` 20 balls <br> left in 5°C inside <br>   vhhhh`);
 });
@@ -193,7 +201,9 @@ test('update: allows attributes to be toggled on even when starting off', async 
 });
 
 test('update: only toggles attributes with boolean class properties', async () => {
-  const root = await fixture(`<main><input aria-disabled="false" value="false"></main>`);
+  const root = await fixture(
+    `<main><input aria-disabled="false" value="false"></main>`
+  );
   const template = document.createElement('template');
   template.innerHTML = `<input required="{{a}}" aria-disabled="{{a}}" hidden="{{a}}" value="{{a}}"/>`;
   const instance = new AssignedTemplateInstance(

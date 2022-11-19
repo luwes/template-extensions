@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,user-scalable=no"
+    />
+    <title>Todos (InterHTML)</title>
+    <style>
+      body {
+        font: 16px/1.8em monospace;
+      }
+      .examples {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { render, enhance, html } from '../dist/interhtml.js';
+
+      function TodoApp() {
+        let text = '';
+        let items = [];
+
+        function run(props) {
+          console.time('render');
+          render(
+            getTemplate({
+              items,
+              text,
+              handleSubmit,
+              handleChange,
+            }),
+            self.container
+          );
+          console.timeEnd('render');
+        }
+        run();
+
+        function handleSubmit(e) {
+          e.preventDefault();
+          if (!text.length) {
+            return;
+          }
+          const newItem = {
+            text: text,
+            id: Date.now(),
+          };
+          items.push(newItem);
+          text = '';
+          run();
+        }
+
+        function handleChange(e) {
+          text = e.target.value;
+          run();
+        }
+      }
+      TodoApp();
+
+      function getTemplate({ items, text, handleSubmit, handleChange }) {
+        return html`
+          <div>
+            <h3>TODO</h3>
+            <ul>
+              ${items.map((item) => html`<li id=${item.id}>${item.text}</li>`)}
+            </ul>
+            <form onsubmit=${handleSubmit}>
+              <label htmlFor="new-todo"> What needs to be done? </label>
+              <input id="new-todo" onchange=${handleChange} value=${text} />
+              <button>Add #${items.length + 1}</button>
+            </form>
+          </div>
+        `;
+      }
+    </script>
+
+    <div id="container"></div>
+
+    <div class="examples">
+      <a href="./">View more examples</a>
+    </div>
+  </body>
+</html>

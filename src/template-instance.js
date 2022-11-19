@@ -27,10 +27,7 @@ export const defaultProcessor = {
           typeof part.element[part.attributeName] === 'boolean'
         ) {
           part.booleanValue = value;
-        } else if (
-          typeof value === 'function' &&
-          part instanceof AttrPart
-        ) {
+        } else if (typeof value === 'function' && part instanceof AttrPart) {
           part.element[part.attributeName] = value;
         } else {
           part.value = value;

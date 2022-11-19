@@ -58,7 +58,8 @@ function stringifyValue(value) {
 }
 
 function normalizeIndex(data, startIndex) {
-  let index = 0, prevChar;
+  let index = 0,
+    prevChar;
   for (let i = 0; i < data.length; i++) {
     if (!(isWhitespace(data[i]) && isWhitespace(prevChar))) {
       if (index === startIndex) return i;
