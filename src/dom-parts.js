@@ -51,13 +51,14 @@ export class AttrPart extends Part {
   #element;
   #attributeName;
   #namespaceURI;
-  constructor(element, attributeName, namespaceURI) {
+  constructor(element, attributeName, namespaceURI, value) {
     super();
     this.#element = element;
     this.#attributeName = attributeName;
     this.#namespaceURI = namespaceURI;
+    if (value !== undefined) this.#value = value;
   }
-  get #list() {
+  get list() {
     return attrPartToList.get(this);
   }
   get attributeName() {
@@ -75,7 +76,7 @@ export class AttrPart extends Part {
   set value(newValue) {
     if (this.#value === newValue) return; // save unnecessary call
     this.#value = newValue;
-    if (!this.#list || this.#list.length === 1) {
+    if (!this.list || this.list.length === 1) {
       // fully templatized
       if (newValue == null) {
         this.#element.removeAttributeNS(
@@ -93,7 +94,7 @@ export class AttrPart extends Part {
       this.#element.setAttributeNS(
         this.#namespaceURI,
         this.#attributeName,
-        this.#list
+        this.list
       );
     }
   }
@@ -104,7 +105,7 @@ export class AttrPart extends Part {
     );
   }
   set booleanValue(value) {
-    if (!this.#list || this.#list.length === 1) this.value = value ? '' : null;
+    if (!this.list || this.list.length === 1) this.value = value ? '' : null;
     else throw new DOMException('Value is not fully templatized');
   }
 }
@@ -115,7 +116,8 @@ export class ChildNodePart extends Part {
   constructor(parentNode, nodes) {
     super();
     this.#parentNode = parentNode;
-    this.#nodes = nodes ? [...nodes] : [new Text()];
+    if (nodes) this.#nodes = [...nodes];
+    else this.#nodes = [new Text()];
   }
   get replacementNodes() {
     return this.#nodes;
@@ -151,12 +153,26 @@ export class ChildNodePart extends Part {
           ? [node]
           : [new Text(node)]
       );
-    if (!normalisedNodes.length) normalisedNodes.push(new Text(''));
-    this.#nodes[0].before(...normalisedNodes);
-    for (const oldNode of this.#nodes) {
-      if (!normalisedNodes.includes(oldNode)) oldNode.remove();
+
+    if (!normalisedNodes.length) {
+      normalisedNodes.push(new Text(''));
     }
+
+    this.#nodes[0].before(...normalisedNodes);
+
+    for (const oldNode of this.#nodes) {
+      if (!normalisedNodes.includes(oldNode)) {
+        oldNode.remove();
+      }
+    }
+
     this.#nodes = normalisedNodes;
+  }
+  get innerHTML() {
+    return this.#nodes.map((node) => {
+      if (node.nodeType === 3) return node.data;
+      if (node.outerHTML) return node.outerHTML;
+    }).join('');
   }
   replaceHTML(html) {
     const fragment = this.parentNode.cloneNode();

@@ -7,7 +7,10 @@
   "types": "src/types.d.ts",
   "scripts": {
     "format": "eslint '*.js' --fix",
-    "test": "web-test-runner **/*test.js --config test/web-test-runner.config.js"
+    "test": "web-test-runner **/*test.js --config test/web-test-runner.config.js",
+    "dev": "esbuild ./interhtml.js --servedir=. --outdir=dist --bundle --format=esm",
+    "build": "esbuild ./interhtml.js --outdir=dist --minify --bundle --format=esm && yarn size",
+    "size": "echo \"\\n  dist/\\033[1m/interhtml.js\\033[0m     \\033[0;32m$(($(cat dist/interhtml.js | gzip -c9 | wc -c)))B gzip\\033[0m\\n\""
   },
   "keywords": [],
   "author": "Wesley Luyten <me@wesleyluyten.com> (https://wesleyluyten.com)",
@@ -19,6 +22,7 @@
   "devDependencies": {
     "@open-wc/testing": "^3.1.6",
     "@web/test-runner": "^0.14.0",
+    "esbuild": "^0.15.14",
     "eslint": "^8.24.0",
     "prettier": "^2.7.1"
   },
