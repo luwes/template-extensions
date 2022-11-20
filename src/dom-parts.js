@@ -56,7 +56,7 @@ export class AttrPart extends Part {
     this.#element = element;
     this.#attributeName = attributeName;
     this.#namespaceURI = namespaceURI;
-    if (value !== undefined) this.#value = value;
+    if (value != null) this.#value = value;
   }
   get list() {
     return attrPartToList.get(this);
@@ -171,21 +171,20 @@ export class ChildNodePart extends Part {
 }
 
 export class InnerTemplatePart extends ChildNodePart {
-  directive;
   constructor(parentNode, template) {
-    let directive =
-      template.getAttribute('directive') || template.getAttribute('type');
-    let expression =
-      template.getAttribute('expression') ||
-      template.getAttribute(directive) ||
-      '';
-    if (expression.startsWith('{{'))
-      expression = expression.trim().slice(2, -2).trim();
-
     super(parentNode);
-
-    this.expression = expression;
     this.template = template;
-    this.directive = directive;
+  }
+  get directive() {
+    return (
+      this.template.getAttribute('directive') ??
+      this.template.getAttribute('type')
+    );
+  }
+  get expression() {
+    return (
+      this.template.getAttribute('expression') ??
+      this.template.getAttribute(this.directive)
+    );
   }
 }
