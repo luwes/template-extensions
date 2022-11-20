@@ -112,6 +112,7 @@ export function createParts(childNodes, selectors, state) {
                 `Warning: Text content did not match. Server: ${serverValue} Client: ${value}`
               );
             }
+            // The ChildNodePart's require the adjoining text to split up.
             newNode = element.splitText(textPos);
             newNode.splitText(textLen);
           }
@@ -201,11 +202,13 @@ export function createSelectors(parts) {
     let first;
     let node = part.element;
     if (node) {
+      // AttrPart
       for (let str of part.list) {
         if (str === part) break;
         textOffset += ('' + str).length;
       }
     } else {
+      // ChildNodePart
       node = replacementNodes[0];
       if (previousSibling?.nodeType === 3 && previousSibling != prevEndNode) {
         const hasContentPrev = !isIgnorable(previousSibling);
