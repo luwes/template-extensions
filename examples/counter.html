@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,user-scalable=no"
+    />
+    <title>Template Extensions</title>
+    <style>
+      body {
+        font: 16px/1.8em monospace;
+      }
+      .examples {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { enhance, html } from '../dist/interhtml.js';
+
+      const run = (props) => {
+        console.time('enhance');
+        enhance(getTemplate(props), window.container);
+        console.timeEnd('enhance');
+      };
+      run({ count: 7 });
+
+      function getTemplate({ count }) {
+        return html`
+          <div>
+            <h1>Counter</h1>
+            ${count > 7
+              ? html`<div>${count} higher baby</div>`
+              : html`<div>${count} on the nose</div>`}
+            <div>
+              <button onclick="${() => run({ count: count + 1 })}">+</button>
+              <button onclick="${() => run({ count: count - 1 })}">-</button>
+            </div>
+            <p style="font-size: ${count * 2}px;">#${count}</p>
+            <ul>
+              ${count > 0 &&
+              [...Array(count)].map((_, i) => html`<li>Line ${i + 1}</li>`)}
+            </ul>
+          </div>
+        `;
+      }
+    </script>
+
+    <div id="container">
+      <div>
+        <h1>Counter</h1>
+        <div>7 on the nose</div>
+        <div>
+          <button>+</button>
+          <button>-</button>
+        </div>
+        <p style="font-size: 14px">#7</p>
+        <ul>
+          <li>Line 1</li>
+          <li>Line 2</li>
+          <li>Line 3</li>
+          <li>Line 4</li>
+          <li>Line 5</li>
+          <li>Line 6</li>
+          <li>Line 7</li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>
