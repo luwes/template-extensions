@@ -28,7 +28,8 @@ export class AssignedTemplateInstance {
     // need to ship with a template w/ expressions. Just the selectors would
     // be needed for hydration / enhancing.
     //
-    // They are xPath paths w/ a custom format for the parts information.
+    // They are xPath paths (ignoring whitespace nodes) w/
+    // a custom format for the parts information.
     //
     // format: xPath +nodesLength(textOffset)[attributeName]{expression}
     //

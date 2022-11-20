@@ -33,10 +33,17 @@ existing elements (from SSR/SSG) with these dynamic parts.
 
 This might come as a surprise but most hydration implementations require
 your markup twice. One with the expressions filled in and the other without.
+
+One of the goals of `AssignedTemplateInstance` is to not have this duplicate
+code but this functionality is under active development. It will require a
+new format that only defines the dynamic expressions much like you would
+manually query each SSR'd element that requires dynamicism and add DOM parts to it.
+
 Note that assigning a template instance to an existing element is only
 concerned about the structure and content leading up to the expressions.
 In the example below it's fine to skip the static text content of the paragraph 
 in the template.
+
 
 ```html
 <div id="root">
