@@ -36,15 +36,26 @@ class TemplateResult {
     this.#processor = processor;
   }
 
-  get templateHTML() {
-    if (htmlCache.has(this.strings)) {
-      return htmlCache.get(this.strings);
-    } else {
-      let html = this.strings[0];
-      for (let i = 0; i < this.values.length; i++)
-        html += `{{${i}}}` + this.strings[i + 1];
-      htmlCache.set(this.strings, html);
-      return html;
+  renderInto(element) {
+    const template = this.template;
+    if (renderedTemplates.get(element) !== template) {
+      renderedTemplates.set(element, template);
+      const instance = new TemplateInstance(
+        template,
+        this.values,
+        this.#processor
+      );
+      renderedTemplateInstances.set(element, instance);
+      if (element instanceof ChildNodePart) {
+        element.replace(...instance.children);
+      } else {
+        element.append(instance);
+      }
+      return;
+    }
+    const templateInstance = renderedTemplateInstances.get(element);
+    if (templateInstance) {
+      templateInstance.update(this.values);
     }
   }
 
@@ -78,37 +89,31 @@ class TemplateResult {
     }
   }
 
-  renderInto(element) {
-    const template = this.template;
-    if (renderedTemplates.get(element) !== template) {
-      renderedTemplates.set(element, template);
-      const instance = new TemplateInstance(
-        template,
-        this.values,
-        this.#processor
-      );
-      renderedTemplateInstances.set(element, instance);
-      if (element instanceof ChildNodePart) {
-        element.replace(...instance.children);
-      } else {
-        element.textContent = '';
-        element.appendChild(instance);
-      }
-      return;
-    }
-    const templateInstance = renderedTemplateInstances.get(element);
-    if (templateInstance) {
-      templateInstance.update(this.values);
+  get templateHTML() {
+    if (htmlCache.has(this.strings)) {
+      return htmlCache.get(this.strings);
+    } else {
+      let html = this.strings[0];
+      for (let i = 0; i < this.values.length; i++)
+        html += `{{${i}}}` + this.strings[i + 1];
+      htmlCache.set(this.strings, html);
+      return html;
     }
   }
 
   toString() {
     let html = this.strings[0];
-    for (let i = 0; i < this.values.length; i++) {
-      html += escapeHtml(this.values[i]) + this.strings[i + 1];
-    }
+    for (let i = 0; i < this.values.length; i++)
+      html += stringifyValue(this.values[i]) + this.strings[i + 1];
     return html;
   }
+}
+
+function stringifyValue(value) {
+  if (Array.isArray(value)) value = value.join('');
+  else if (typeof value === 'function') value = '';
+  else value += '';
+  return value;
 }
 
 const defaultProcessor = {
@@ -145,7 +150,6 @@ export function processDocumentFragment(instance, part, value) {
     if (value.childNodes.length) part.replace(...value.childNodes);
     return true;
   }
-  return false;
 }
 
 function processEvent(instance, part, value) {
@@ -217,30 +221,32 @@ function processIterable(instance, part, value) {
   if (!isIterable(value)) return false;
   if (part instanceof ChildNodePart) {
     const nodes = [];
-    let i = 0;
+    let index = 0;
     for (const item of value) {
       if (item instanceof TemplateResult) {
         if (instance.assign) {
-          item.enhanceInto({ childNodes: [part.replacementNodes[i]] });
+          const { childNodes } = item.template.content;
+          const len = item.length ?? getContentChildNodes(childNodes).length;
+          let fragment = getContentChildNodes(part.replacementNodes).slice(
+            index,
+            index + len
+          );
+          item.enhanceInto({ childNodes: fragment });
+          index += len;
         } else {
           const fragment = document.createDocumentFragment();
           item.renderInto(fragment);
           nodes.push(...fragment.childNodes);
         }
       } else if (item instanceof DocumentFragment) {
-        if (instance.assign) {
-          // todo fix
-        } else {
+        if (!instance.assign) {
           nodes.push(...item.childNodes);
         }
       } else {
-        if (instance.assign) {
-          // todo fix
-        } else {
+        if (!instance.assign) {
           nodes.push(String(item));
         }
       }
-      ++i;
     }
     if (nodes.length) part.replace(...nodes);
     return true;
@@ -250,14 +256,16 @@ function processIterable(instance, part, value) {
   }
 }
 
-const replacements = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&apos;',
-};
+function getContentChildNodes(childNodes) {
+  let nodes = [];
+  for (let n of childNodes) if (!isIgnorable(n)) nodes.push(n);
+  return nodes;
+}
 
-function escapeHtml(val) {
-  return `${val}`.replace(/[&<>"']/g, (char) => replacements[char]);
+const reAnyChars = /[^\t\n\r ]/;
+function isIgnorable(node) {
+  return (
+    node.nodeType === 8 || // A comment node
+    (node.nodeType === 3 && !reAnyChars.test(node.data)) // a text node, all ws
+  );
 }

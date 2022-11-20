@@ -24,6 +24,8 @@
         console.time('enhance');
         enhance(getTemplate(props), window.container);
         console.timeEnd('enhance');
+
+        // console.log(getTemplate(props).toString());
       };
       run({ count: 7 });
 
@@ -31,6 +33,16 @@
         return html`
           <div>
             <h1>Counter</h1>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+              eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
+              enim ad minim veniam, quis nostrud exercitation ullamco laboris
+              nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+              reprehenderit in voluptate velit esse cillum dolore eu fugiat
+              nulla pariatur. Excepteur sint occaecat cupidatat non proident,
+              sunt in culpa qui officia deserunt mollit anim id est ${count}
+              laborum. ${count}
+            </p>
             ${count > 7
               ? html`<div>${count} higher baby</div>`
               : html`<div>${count} on the nose</div>`}
@@ -39,10 +51,15 @@
               <button onclick="${() => run({ count: count - 1 })}">-</button>
             </div>
             <p style="font-size: ${count * 2}px;">#${count}</p>
-            <ul>
+            <dl>
               ${count > 0 &&
-              [...Array(count)].map((_, i) => html`<li>Line ${i + 1}</li>`)}
-            </ul>
+              [...Array(Math.min(count, 9))].map(
+                (_, i) => html`
+                  <dt>${count}</dt>
+                  <dd>Line ${i + 1}</dd>
+                `
+              )}
+            </dl>
           </div>
         `;
       }
@@ -51,21 +68,37 @@
     <div id="container">
       <div>
         <h1>Counter</h1>
+        <p>
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+          minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+          aliquip ex ea commodo consequat. Duis aute irure dolor in
+          reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+          pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
+          culpa qui officia deserunt mollit anim id est 7 laborum. 7
+        </p>
         <div>7 on the nose</div>
         <div>
           <button>+</button>
           <button>-</button>
         </div>
         <p style="font-size: 14px">#7</p>
-        <ul>
-          <li>Line 1</li>
-          <li>Line 2</li>
-          <li>Line 3</li>
-          <li>Line 4</li>
-          <li>Line 5</li>
-          <li>Line 6</li>
-          <li>Line 7</li>
-        </ul>
+        <dl>
+          <dt>7</dt>
+          <dd>Line 1</dd>
+          <dt>7</dt>
+          <dd>Line 2</dd>
+          <dt>7</dt>
+          <dd>Line 3</dd>
+          <dt>7</dt>
+          <dd>Line 4</dd>
+          <dt>7</dt>
+          <dd>Line 5</dd>
+          <dt>7</dt>
+          <dd>Line 6</dd>
+          <dt>7</dt>
+          <dd>Line 7</dd>
+        </dl>
       </div>
     </div>
   </body>
