@@ -59,6 +59,71 @@ export class AssignedTemplateInstance {
   }
 }
 
+function createSelectors(parts) {
+  const selectors = [];
+  for (const [expr, part] of parts) {
+    let { attributeName, replacementNodes } = part;
+    let childNodesLength = 1;
+    let startOffset = 0;
+    let node = part.element;
+    if (node) {
+      // AttrPart
+      for (let str of part.list) {
+        if (str === part) break;
+        startOffset += ('' + str).length;
+      }
+    } else {
+      // ChildNodePart
+      childNodesLength = getContentChildNodesLength(replacementNodes) ?? 1;
+      node = getContentChildNode(replacementNodes, 0);
+      startOffset = getStartOffset(node);
+    }
+
+    let path = createPath(node);
+    let selector = { x: expr, p: path };
+    if (childNodesLength !== 1) selector.n = childNodesLength;
+    if (startOffset) selector.o = startOffset;
+    if (attributeName) selector.a = attributeName;
+    selectors.push(selector);
+    // console.warn(selector);
+  }
+
+  return selectors;
+}
+
+function getStartOffset(node) {
+  let text = '';
+  while ((node = node.previousSibling)) {
+    if (node?.nodeType !== 3) break;
+    text = node.data + text;
+  }
+  text = text.replace(reWhitespace, ' ');
+  return !node && isWhitespace(text[0]) ? text.length - 1 : text.length;
+}
+
+function createPath(node) {
+  let path = [];
+  let { parentNode } = node;
+  while (parentNode) {
+    let i = 0;
+    let { localName, nodeType } = node;
+    let prevNode = node;
+    while ((node = getPreviousContentSibling(node, localName))) {
+      if (nodeType === 3) {
+        if (node.nodeType === 3 && prevNode.nodeType !== node.nodeType) ++i;
+      } else {
+        ++i;
+      }
+      prevNode = node;
+    }
+    let type = localName ?? 'text()';
+    path.push(!i ? type : `${type}[${i + 1}]`);
+    node = parentNode;
+    ({ parentNode } = node);
+  }
+  return `/${path.reverse().join('/')}`;
+}
+
 function createParts(childNodes, selectors, state) {
   const parts = [];
   for (let selector of selectors) {
@@ -224,71 +289,6 @@ function normalizeIndex(data, startIndex, trimStart) {
 
 function isWhitespace(char) {
   return char === ' ' || char === '\t' || char === '\n' || char === '\r';
-}
-
-export function createSelectors(parts) {
-  const selectors = [];
-  for (const [expr, part] of parts) {
-    let { attributeName, replacementNodes } = part;
-    let childNodesLength = 1;
-    let startOffset = 0;
-    let node = part.element;
-    if (node) {
-      // AttrPart
-      for (let str of part.list) {
-        if (str === part) break;
-        startOffset += ('' + str).length;
-      }
-    } else {
-      // ChildNodePart
-      childNodesLength = getContentChildNodesLength(replacementNodes) ?? 1;
-      node = getContentChildNode(replacementNodes, 0);
-      startOffset = getStartOffset(node);
-    }
-
-    let path = createPath(node);
-    let selector = { x: expr, p: path };
-    if (childNodesLength !== 1) selector.n = childNodesLength;
-    if (startOffset) selector.o = startOffset;
-    if (attributeName) selector.a = attributeName;
-    selectors.push(selector);
-    // console.warn(selector);
-  }
-
-  return selectors;
-}
-
-function getStartOffset(node) {
-  let text = '';
-  while ((node = node.previousSibling)) {
-    if (node?.nodeType !== 3) break;
-    text = node.data + text;
-  }
-  text = text.replace(reWhitespace, ' ');
-  return !node && isWhitespace(text[0]) ? text.length - 1 : text.length;
-}
-
-function createPath(node) {
-  let path = [];
-  let { parentNode } = node;
-  while (parentNode) {
-    let i = 0;
-    let { localName, nodeType } = node;
-    let prevNode = node;
-    while ((node = getPreviousContentSibling(node, localName))) {
-      if (nodeType === 3) {
-        if (node.nodeType === 3 && prevNode.nodeType !== node.nodeType) ++i;
-      } else {
-        ++i;
-      }
-      prevNode = node;
-    }
-    let type = localName ?? 'text()';
-    path.push(!i ? type : `${type}[${i + 1}]`);
-    node = parentNode;
-    ({ parentNode } = node);
-  }
-  return `/${path.reverse().join('/')}`;
 }
 
 /**
