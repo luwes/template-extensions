@@ -7,7 +7,7 @@ import { defaultProcessor, parse } from './template-instance.js';
 export class AssignedTemplateInstance {
   #parts = [];
   #processor;
-  assigned = true;
+  assign = true;
 
   constructor(element, template, state, processor = defaultProcessor) {
     // console.log(template.innerHTML);
@@ -51,7 +51,7 @@ export class AssignedTemplateInstance {
     processor.createCallback?.(this, this.#parts, state);
     processor.processCallback(this, this.#parts, state);
 
-    this.assigned = false;
+    this.assign = false;
   }
 
   update(state) {

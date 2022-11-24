@@ -136,7 +136,7 @@ const defaultProcessor = {
 
 function processSubTemplate(instance, part, value) {
   if (value instanceof TemplateResult && part instanceof ChildNodePart) {
-    if (instance.assigned) {
+    if (instance.assign) {
       value.enhanceInto(part.parentNode);
     } else {
       value.renderInto(part);
@@ -224,7 +224,7 @@ function processIterable(instance, part, value) {
     let index = 0;
     for (const item of value) {
       if (item instanceof TemplateResult) {
-        if (instance.assigned) {
+        if (instance.assign) {
           const { childNodes } = item.template.content;
           const len = item.length ?? getContentChildNodes(childNodes).length;
           let fragment = getContentChildNodes(part.replacementNodes).slice(
@@ -239,11 +239,11 @@ function processIterable(instance, part, value) {
           nodes.push(...fragment.childNodes);
         }
       } else if (item instanceof DocumentFragment) {
-        if (!instance.assigned) {
+        if (!instance.assign) {
           nodes.push(...item.childNodes);
         }
       } else {
-        if (!instance.assigned) {
+        if (!instance.assign) {
           nodes.push(String(item));
         }
       }
