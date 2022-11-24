@@ -7,14 +7,15 @@ import { defaultProcessor, parse } from './template-instance.js';
 export class AssignedTemplateInstance {
   #parts = [];
   #processor;
-  assign = true;
+  assigned = true;
+
   constructor(element, template, state, processor = defaultProcessor) {
     // console.log(template.innerHTML);
     const tmp = template.content.cloneNode(true);
 
-    //console.time('parse');
+    // console.time('parse');
     const parts = parse(tmp);
-    //console.timeEnd('parse');
+    // console.timeEnd('parse');
 
     //console.time('parse2');
     processor.processCallback(tmp, parts, state);
@@ -28,14 +29,14 @@ export class AssignedTemplateInstance {
     // need to ship with a template w/ expressions. Just the selectors would
     // be needed for hydration / enhancing.
     //
-    // They are xPath paths (ignoring whitespace nodes) w/
-    // a custom format for the parts information.
+    // The selectors include xPath like paths (ignoring whitespace nodes).
     //
-    // format: xPath +nodesLength(textOffset)[attributeName]{expression}
+    // format: {x: expression, p: path, o: startOffset, a: attributeName, n: nodesLength}
     //
-    //         ./div/h1 [class]{0} [data-a]{1} [data-b]{2}
-    //         ./div/ul/li[6]/text() {10}
-    //         ./div/div[3] +2(1){8}
+    //         {x: '0', p: '/div/h1', o: 7, a: 'class'}
+    //         {x: '6', p: '/div/div[2]/button[2]', a: 'onclick'}
+    //         {x: '3', p: '/div/p/text()', o: 448}
+    //         {x: '9', p: '/div/dl/dt', n: 8}
 
     //console.time('createSelectors');
     const selectors = createSelectors(parts);
@@ -50,106 +51,129 @@ export class AssignedTemplateInstance {
     processor.createCallback?.(this, this.#parts, state);
     processor.processCallback(this, this.#parts, state);
 
-    this.assign = false;
+    this.assigned = false;
   }
+
   update(state) {
     this.#processor.processCallback(this, this.#parts, state);
   }
 }
 
-export function createParts(childNodes, selectors, state) {
+function createParts(childNodes, selectors, state) {
   const parts = [];
   for (let selector of selectors) {
     // console.log(selector);
-    const [path, ...exprDetails] = selector.split(' ');
+    const { p: path, x: expr, a: attrName, o: startOffset = 0 } = selector;
     const element = getNodeFromXPath(childNodes, path);
-    const attrLists = {};
-
-    for (let i = 0; i < exprDetails.length; i++) {
-      const exprDetail = exprDetails[i];
-      const attrName = extractChars(exprDetail, '[', ']');
-      const expr = extractChars(exprDetail, '{', '}');
-      let value = state[expr];
-
-      if (!attrName) {
-        let newNode = element;
-        if (element.nodeType === 3) {
-          let { data } = element;
-          let textPos = extractChars(exprDetail, '(', ')', true) ?? 0;
-          // https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
-          if (!getPreviousContentSibling(element) && isWhitespace(data[0])) {
-            ++textPos;
-          }
-          value = stringifyValue(state[expr]);
-          if (value !== data) {
-            let textLen = value.length;
-            let serverValue = data.slice(textPos, textPos + textLen);
-            if (value !== serverValue) {
-              textPos = normalizeIndex(data, textPos);
-              textLen = normalizeIndex(data.slice(textPos), textLen);
-              serverValue = data.slice(textPos, textPos + textLen);
-            }
-            if (!globalThis.PROD && value !== serverValue) {
-              console.warn(
-                `Warning: Text content did not match. Server: ${serverValue} Client: ${value}`
-              );
-            }
-            // The ChildNodePart's require the adjoining text to split up.
-            newNode = element.splitText(textPos);
-            newNode.splitText(textLen);
-          }
-          const part = new ChildNodePart(newNode.parentNode, [newNode]);
-          parts.push([expr, part]);
-        } else {
-          const nodesLength = extractChars(exprDetail, '+', null, true) ?? 1;
-          const nodes = getNextChildNodes(element, nodesLength);
-          const part = new ChildNodePart(nodes[0].parentNode, nodes);
-          parts.push([expr, part]);
-        }
-      } else if (attrName) {
-        let textPos = extractChars(exprDetail, '(', ')', true) ?? 0;
-
-        if (typeof state[expr] === 'function') value = undefined;
-
-        const attr = element.attributes.getNamedItem(attrName);
-        const startPos = textPos;
-        const list = attrLists[path + attrName] ?? new AttrPartList();
-        attrLists[path + attrName] = list;
-        if (startPos > 0) {
-          list.append(attr?.value.slice(`${list}`.length, startPos));
-        }
-
-        const valueLength = ('' + value).length;
-        let serverValue = attr?.value.slice(startPos, startPos + valueLength);
-        if (typeof value === 'boolean' && !attr?.value?.length) {
-          serverValue = attr?.value == '';
-        }
-
-        if (
-          !globalThis.PROD &&
-          value != serverValue &&
-          `${value}` != serverValue
-        ) {
-          console.warn(
-            `Warning: Attribute part ${attrName} did not match. Server: ${serverValue} Client: ${value}`
-          );
-        }
-
-        const part = new AttrPart(element, attrName, attr?.namespaceURI, value);
-        parts.push([expr, part]);
-        list.append(part);
-
-        const exprLength = exprDetails.filter((e) =>
-          e.startsWith(`[${attrName}]`)
-        ).length;
-        if (i === exprLength - 1) {
-          const suffix = attr?.value.slice(`${list}`.length);
-          if (suffix) list.append(suffix);
-        }
-      }
+    if (!element) continue;
+    let value = state[expr];
+    let part;
+    if (!attrName) {
+      const nodesLength = selector.n ?? 1;
+      part = createChildNodePart(element, nodesLength, startOffset, value);
+    } else {
+      if (typeof state[expr] === 'function') value = '';
+      part = createAttrPart(element, attrName, startOffset, value);
     }
+    parts.push([expr, part]);
   }
   return parts;
+}
+
+function createChildNodePart(element, nodesLength, startOffset, value) {
+  let nodes;
+  if (element.nodeType === 3) {
+    value = stringifyValue(value);
+
+    let { data } = element;
+    let textLen = value.length;
+    let serverValue = data.slice(startOffset, startOffset + textLen);
+
+    if (value !== serverValue) {
+      const trimStart = !element.previousSibling;
+      [element, startOffset] = normalizeNodeIndex(
+        element,
+        startOffset,
+        trimStart
+      );
+      ({ data } = element);
+      textLen = normalizeIndex((data = data.slice(startOffset)), value.length);
+      serverValue = data.slice(0, textLen);
+    }
+
+    if (!globalThis.PROD && value !== serverValue) {
+      console.warn(
+        `Warning: Text content did not match. Server: ${serverValue} Client: ${value}`
+      );
+    }
+
+    // The ChildNodePart's require the adjoining text to split up.
+    element = element.splitText(startOffset);
+    element.splitText(textLen);
+
+    nodes = [element];
+  } else {
+    nodes = getNextChildNodes(element, nodesLength);
+  }
+  return new ChildNodePart(nodes[0].parentNode, nodes);
+}
+
+const attrLists = new WeakMap();
+
+function createAttrPart(element, attrName, startOffset, value) {
+  const attr = element.attributes[attrName];
+  const list = attrLists.get(element)?.[attrName] ?? new AttrPartList();
+  if (typeof list.item(list.length - 1) === 'string') {
+    list.splice(list.length - 1, 1);
+  }
+  attrLists.set(element, { [attrName]: list });
+  if (startOffset > 0) {
+    list.append(attr?.value.slice(`${list}`.length, startOffset));
+  }
+
+  const valueLength = `${value}`.length;
+  let serverValue = attr?.value.slice(startOffset, startOffset + valueLength);
+  if (typeof value === 'boolean' && !attr?.value?.length) {
+    serverValue = attr?.value == '';
+  }
+
+  if (!globalThis.PROD && value != serverValue && `${value}` != serverValue) {
+    console.warn(
+      `Warning: Attribute part ${attrName} did not match. Server: ${serverValue} Client: ${value}`
+    );
+  }
+
+  const part = new AttrPart(element, attrName, attr?.namespaceURI, value);
+  list.append(part);
+
+  const suffix = attr?.value.slice(`${list}`.length);
+  if (suffix) list.append(suffix);
+
+  return part;
+}
+
+function getNodeFromXPath(childNodes, xPath) {
+  let target;
+  let path = xPath.split('/');
+  // todo: support id attribute selector for a fast path?
+  // https://devhints.io/xpath
+  path.shift(); // shift off first section
+
+  for (let query of path) {
+    let [type, index] = query.split('[');
+    index = index ? parseInt(index) : 1;
+
+    if (type === 'text()') target = getTypeFragment(childNodes, index - 1, 3);
+    else target = getContentChildNode(childNodes, index - 1, type);
+
+    if (!globalThis.PROD && !target) {
+      console.warn(`Warning: Node path could not be found /${path.join('/')}`);
+      return null;
+    }
+
+    childNodes = target?.childNodes;
+  }
+  return target;
 }
 
 function stringifyValue(value) {
@@ -158,11 +182,38 @@ function stringifyValue(value) {
   return value;
 }
 
-function normalizeIndex(data, startIndex) {
+// Get the server node and startIndex including whitespace. The startIndex argument coming
+// from the client is from minimized HTML, whitespaces removed according to the rules of
+// https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
+function normalizeNodeIndex(node, startIndex, trimStart) {
+  let index = 0,
+    data,
+    prevChar;
+  // Iterate through text nodes only.
+  while ((data = node.data)) {
+    for (let i = 0; i < data.length; i++) {
+      if (trimStart && !isWhitespace(data[i])) {
+        trimStart = false;
+      }
+      if (!trimStart && !(isWhitespace(data[i]) && isWhitespace(prevChar))) {
+        if (index === startIndex) return [node, i];
+        ++index;
+      }
+      prevChar = data[i];
+    }
+    node = node.nextSibling;
+  }
+  return [node, startIndex];
+}
+
+function normalizeIndex(data, startIndex, trimStart) {
   let index = 0,
     prevChar;
   for (let i = 0; i < data.length; i++) {
-    if (!(isWhitespace(data[i]) && isWhitespace(prevChar))) {
+    if (trimStart && !isWhitespace(data[i])) {
+      trimStart = false;
+    }
+    if (!trimStart && !(isWhitespace(data[i]) && isWhitespace(prevChar))) {
       if (index === startIndex) return i;
       ++index;
     }
@@ -175,99 +226,69 @@ function isWhitespace(char) {
   return char === ' ' || char === '\t' || char === '\n' || char === '\r';
 }
 
-function getNodeFromXPath(childNodes, xPath) {
-  let target;
-  let path = xPath.split('/');
-  // todo: support id attribute selector for a fast path?
-  // https://devhints.io/xpath
-  path.shift();
-  for (let query of path) {
-    const index = extractChars(query, '[', ']', true) ?? 1;
-    let type = query.split('[')[0];
-    if (type === 'text()') type = 3;
-    target = getContentChildNode(childNodes, index - 1, type);
-    childNodes = target.childNodes;
-  }
-  return target;
-}
-
 export function createSelectors(parts) {
   const selectors = [];
-  const grouping = {};
-  let prevEndNode;
-
   for (const [expr, part] of parts) {
-    let { attributeName, replacementNodes, previousSibling } = part;
-    let len =
-      (replacementNodes && getContentChildNodesLength(replacementNodes)) ?? 1;
-    let textOffset = 0;
-    let first;
+    let { attributeName, replacementNodes } = part;
+    let childNodesLength = 1;
+    let startOffset = 0;
     let node = part.element;
     if (node) {
       // AttrPart
       for (let str of part.list) {
         if (str === part) break;
-        textOffset += ('' + str).length;
+        startOffset += ('' + str).length;
       }
     } else {
       // ChildNodePart
+      childNodesLength = getContentChildNodesLength(replacementNodes) ?? 1;
       node = getContentChildNode(replacementNodes, 0);
-      if (previousSibling?.nodeType === 3 && previousSibling != prevEndNode) {
-        const hasContentPrev = !isIgnorable(previousSibling);
-        if (hasContentPrev) first = true;
-
-        // https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
-        let text = previousSibling.data?.replace(reWhitespace, ' ');
-        const hasPrev = previousSibling.previousSibling;
-        if (!hasPrev) text = text?.trimStart();
-        textOffset += text?.length ?? 0;
-      }
-      prevEndNode = replacementNodes[replacementNodes.length - 1];
+      startOffset = getStartOffset(node);
     }
 
     let path = createPath(node);
-    if (first && path[0][1]) {
-      path[0][1]--;
-    }
-    path = `/${path
-      .map(([type, index]) => (!index ? type : `${type}[${index + 1}]`))
-      .reverse()
-      .join('/')}`;
-
-    len = len !== 1 ? `+${len}` : '';
-    textOffset = textOffset ? `(${textOffset})` : '';
-    attributeName = attributeName ? `[${attributeName}]` : '';
-
-    const index = grouping[path];
-    let selector = index >= 0 ? selectors[index] : path;
-    selector += ` ${len}${attributeName}${textOffset}{${expr}}`;
-    if (index >= 0) selectors[index] = selector;
-    else grouping[path] = selectors.push(selector) - 1;
+    let selector = { x: expr, p: path };
+    if (childNodesLength !== 1) selector.n = childNodesLength;
+    if (startOffset) selector.o = startOffset;
+    if (attributeName) selector.a = attributeName;
+    selectors.push(selector);
     // console.warn(selector);
   }
 
   return selectors;
 }
 
+function getStartOffset(node) {
+  let text = '';
+  while ((node = node.previousSibling)) {
+    if (node?.nodeType !== 3) break;
+    text = node.data + text;
+  }
+  text = text.replace(reWhitespace, ' ');
+  return !node && isWhitespace(text[0]) ? text.length - 1 : text.length;
+}
+
 function createPath(node) {
-  const path = [];
+  let path = [];
   let { parentNode } = node;
   while (parentNode) {
     let i = 0;
     let { localName, nodeType } = node;
-    while ((node = getPreviousContentSibling(node, localName ?? nodeType))) ++i;
-    path.push([localName ?? 'text()', i]);
+    let prevNode = node;
+    while ((node = getPreviousContentSibling(node, localName))) {
+      if (nodeType === 3) {
+        if (node.nodeType === 3 && prevNode.nodeType !== node.nodeType) ++i;
+      } else {
+        ++i;
+      }
+      prevNode = node;
+    }
+    let type = localName ?? 'text()';
+    path.push(!i ? type : `${type}[${i + 1}]`);
     node = parentNode;
     ({ parentNode } = node);
   }
-  return path;
-}
-
-function extractChars(val, startDelimiter, endDelimiter, int) {
-  val = val.split(startDelimiter)[1];
-  if (val && endDelimiter) val = val.split(endDelimiter)[0];
-  if (val && int) val = parseInt(val);
-  return val;
+  return `/${path.reverse().join('/')}`;
 }
 
 /**
@@ -293,9 +314,25 @@ const reAnyChars = /[^\t\n\r ]/;
 
 function isIgnorable(node) {
   return (
-    node.nodeType === 8 || // A comment node
-    (node.nodeType === 3 && !reAnyChars.test(node.data)) // a text node, all ws
+    node.nodeType === 3 && !reAnyChars.test(node.data) // a text node, all ws
   );
+}
+
+// This makes adjoining elements with the same type 1 fragment, counted as 1.
+// For example adjoining text nodes are seen as 1 big text node. This is required
+// because the DOM parts require the text nodes to be split up so we need to see
+// it as 1 big text node to calculate the startOffset for creating new DOM parts.
+function getTypeFragment(childNodes, index, type) {
+  let i = -1;
+  let counted = false;
+  for (let n of childNodes) {
+    if (n.nodeType !== type) counted = false;
+    if (!counted && (n.localName ?? n.nodeType) === type && !isIgnorable(n)) {
+      ++i;
+      counted = true;
+    }
+    if (i === index) return n;
+  }
 }
 
 function getContentChildNode(childNodes, index, type) {

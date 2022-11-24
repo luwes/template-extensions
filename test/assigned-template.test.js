@@ -116,9 +116,78 @@ test('nodes: should ignore whitespace from server', async () => {
   is(root.innerHTML, `\n    <span>20</span>\n    golf balls left\n  `);
 });
 
+test('nodes: should preserve comments', async () => {
+  const root = await fixture(`<main>
+    Excepteur sint occaecat cupidatat non proident,
+    sunt in culpa qui officia deserunt mollit anim id est 10
+    laborum. <!>items
+  </main>`);
+  let tpl = document.createElement('template');
+  tpl.innerHTML = `
+    Excepteur sint occaecat cupidatat non proident,
+    sunt in culpa qui officia deserunt mollit anim id est {{count}}
+    laborum. <!>{{text}}
+  `;
+  let instance = new AssignedTemplateInstance(root, tpl, {
+    count: 10,
+    text: 'items',
+  });
+  is(
+    root.innerHTML,
+    `
+    Excepteur sint occaecat cupidatat non proident,
+    sunt in culpa qui officia deserunt mollit anim id est 10
+    laborum. <!---->items
+  `
+  );
+  instance.update({ count: 20, text: 'golf balls' });
+  is(
+    root.innerHTML,
+    `
+    Excepteur sint occaecat cupidatat non proident,
+    sunt in culpa qui officia deserunt mollit anim id est 20
+    laborum. <!---->golf balls
+  `
+  );
+});
+
+test('nodes: can leave out text on client if node path is intact', async () => {
+  const root = await fixture(`<main>
+    Excepteur sint occaecat cupidatat non proident,
+    sunt in culpa qui officia deserunt mollit anim id est <!>10
+    laborum. <!>items
+  </main>`);
+  let tpl = document.createElement('template');
+  tpl.innerHTML = `
+    .<!>{{count}}<!>{{text}}
+  `;
+  let instance = new AssignedTemplateInstance(root, tpl, {
+    count: 10,
+    text: 'items',
+  });
+  is(
+    root.innerHTML,
+    `
+    Excepteur sint occaecat cupidatat non proident,
+    sunt in culpa qui officia deserunt mollit anim id est <!---->10
+    laborum. <!---->items
+  `
+  );
+  instance.update({ count: 20, text: 'golf balls' });
+  is(
+    root.innerHTML,
+    `
+    Excepteur sint occaecat cupidatat non proident,
+    sunt in culpa qui officia deserunt mollit anim id est <!---->20
+    laborum. <!---->golf balls
+  `
+  );
+});
+
 test('nodes: should support mixed child expressions', async () => {
   const root = await fixture(`
-    <main> 10 items <br> left in 40°C outside <br>   brrrr</main>
+    <main> 10 items <br> left in 40°C outside <br>
+    brrrr</main>
   `);
   let tpl = document.createElement('template');
   tpl.innerHTML = ` {{ count }}{{ text }} <br> left in {{deg}}°C{{location}} <br>   {{sound}}`;
@@ -129,7 +198,11 @@ test('nodes: should support mixed child expressions', async () => {
     location: ' outside',
     sound: 'brrrr',
   });
-  is(root.innerHTML, ` 10 items <br> left in 40°C outside <br>   brrrr`);
+  is(
+    root.innerHTML,
+    ` 10 items <br> left in 40°C outside <br>
+    brrrr`
+  );
   instance.update({
     count: 20,
     text: ' balls',
@@ -137,7 +210,11 @@ test('nodes: should support mixed child expressions', async () => {
     location: ' inside',
     sound: 'vhhhh',
   });
-  is(root.innerHTML, ` 20 balls <br> left in 5°C inside <br>   vhhhh`);
+  is(
+    root.innerHTML,
+    ` 20 balls <br> left in 5°C inside <br>
+    vhhhh`
+  );
 });
 
 const propertyIdentityOrBooleanAttribute = {
