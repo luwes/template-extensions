@@ -41,9 +41,8 @@ manually query each SSR'd element that requires dynamicism and add DOM parts to 
 
 Note that assigning a template instance to an existing element is only
 concerned about the structure and content leading up to the expressions.
-In the example below it's fine to skip the static text content of the paragraph 
+In the example below it's fine to skip the static text content of the paragraph
 in the template.
-
 
 ```html
 <div id="root">

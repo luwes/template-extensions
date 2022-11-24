@@ -40,6 +40,7 @@ export const defaultProcessor = {
 export class TemplateInstance extends DocumentFragment {
   #parts;
   #processor;
+
   constructor(template, state, processor = defaultProcessor) {
     super();
     this.append(template.content.cloneNode(true));
@@ -49,6 +50,7 @@ export class TemplateInstance extends DocumentFragment {
     processor.createCallback?.(this, this.#parts, state);
     processor.processCallback(this, this.#parts, state);
   }
+
   update(state) {
     this.#processor.processCallback(this, this.#parts, state);
   }
