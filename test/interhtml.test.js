@@ -12,17 +12,56 @@ test('hydrates div with children', async () => {
   is(root.innerHTML, `<div><b>7</b></div>`);
 });
 
+test('hydrates root fragments', async () => {
+  const root = await fixture(`<main>
+<div>1</div>
+<div>2</div>
+<div>3</div>
+<div>2</div>
+<div>4</div>
+<div>6</div>
+  </main>`);
+  const getTemplate = (add, mult) => html`
+    ${[1, 2, 3].map((i) => html`<div>${i + add}</div>`)}
+    ${[1, 2, 3].map((i) => html`<div>${i * mult}</div>`)}
+  `;
+  enhance(getTemplate(0, 2), root);
+  is(
+    root.innerHTML,
+    `
+<div>1</div>
+<div>2</div>
+<div>3</div>
+<div>2</div>
+<div>4</div>
+<div>6</div>
+  `
+  );
+  enhance(getTemplate(1, 3), root);
+  is(
+    root.innerHTML,
+    `
+<div>2</div><div>3</div><div>4</div>
+
+
+<div>3</div><div>6</div><div>9</div>
+
+
+  `
+  );
+});
+
 test('hydrate w/ observables bug', async function () {
   const root = await fixture(`<main>
     <div class="box level">
       <div class="level-item">
-        <button class="button">-</button>
+        <button class="button" onclick="">-</button>
       </div>
       <div class="level-item">
         <h1 class="title">0</h1>
       </div>
       <div class="level-item">
-        <button class="button">+</button>
+        <button class="button" onclick="">+</button>
       </div>
     </div>
   </main>`);
@@ -54,7 +93,7 @@ test('hydrate w/ observables bug', async function () {
   is(root.querySelector('h1').textContent, '-1');
 });
 
-test('hydrate can add conditional observables in content', async function () {
+test('hydrate can add conditionals in content', async function () {
   const root = await fixture(`
     <main><div class="hamburger">Pickle Ketchup Cheese Ham</div></main>`);
 
@@ -73,7 +112,7 @@ test('hydrate can add conditional observables in content', async function () {
   is(root.innerHTML, `<div class="hamburger">Pickle Mayo Cheese Ham</div>`);
 });
 
-test('hydrate can add conditional observables in content w/ newlines', async function () {
+test('hydrate can add conditionals in content w/ newlines', async function () {
   const root = await fixture(`<main>
     <div class="hamburger">
       Pickle

@@ -136,7 +136,7 @@ const defaultProcessor = {
 
 function processSubTemplate(instance, part, value) {
   if (value instanceof TemplateResult && part instanceof ChildNodePart) {
-    if (instance.assign) {
+    if (instance.assigned) {
       value.enhanceInto(part.parentNode);
     } else {
       value.renderInto(part);
@@ -224,7 +224,7 @@ function processIterable(instance, part, value) {
     let index = 0;
     for (const item of value) {
       if (item instanceof TemplateResult) {
-        if (instance.assign) {
+        if (instance.assigned) {
           const { childNodes } = item.template.content;
           const len = item.length ?? getContentChildNodes(childNodes).length;
           let fragment = getContentChildNodes(part.replacementNodes).slice(
@@ -239,11 +239,11 @@ function processIterable(instance, part, value) {
           nodes.push(...fragment.childNodes);
         }
       } else if (item instanceof DocumentFragment) {
-        if (!instance.assign) {
+        if (!instance.assigned) {
           nodes.push(...item.childNodes);
         }
       } else {
-        if (!instance.assign) {
+        if (!instance.assigned) {
           nodes.push(String(item));
         }
       }
@@ -265,7 +265,6 @@ function getContentChildNodes(childNodes) {
 const reAnyChars = /[^\t\n\r ]/;
 function isIgnorable(node) {
   return (
-    node.nodeType === 8 || // A comment node
-    (node.nodeType === 3 && !reAnyChars.test(node.data)) // a text node, all ws
+    node.nodeType === 3 && !reAnyChars.test(node.data) // a text node, all ws
   );
 }

@@ -27,12 +27,12 @@
 
         // console.log(getTemplate(props).toString());
       };
-      run({ count: 7 });
+      run({ count: 4 });
 
       function getTemplate({ count }) {
         return html`
           <div>
-            <h1>Counter</h1>
+            <h1 class="counter${count}${count + 1}">Counter</h1>
             <p>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
               eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
@@ -40,10 +40,10 @@
               nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
               reprehenderit in voluptate velit esse cillum dolore eu fugiat
               nulla pariatur. Excepteur sint occaecat cupidatat non proident,
-              sunt in culpa qui officia deserunt mollit anim id est ${count}
-              laborum. ${count}
+              sunt in culpa qui officia deserunt mollit anim id est
+              <!>${count} laborum. ${count}
             </p>
-            ${count > 7
+            ${count > 4
               ? html`<div>${count} higher baby</div>`
               : html`<div>${count} on the nose</div>`}
             <div>
@@ -53,7 +53,7 @@
             <p style="font-size: ${count * 2}px;">#${count}</p>
             <dl>
               ${count > 0 &&
-              [...Array(Math.min(count, 9))].map(
+              [...Array(Math.min(count, 7))].map(
                 (_, i) => html`
                   <dt>${count}</dt>
                   <dd>Line ${i + 1}</dd>
@@ -67,7 +67,7 @@
 
     <div id="container">
       <div>
-        <h1>Counter</h1>
+        <h1 class="counter45">Counter</h1>
         <p>
           Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
           eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
@@ -75,29 +75,24 @@
           aliquip ex ea commodo consequat. Duis aute irure dolor in
           reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
           pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-          culpa qui officia deserunt mollit anim id est 7 laborum. 7
+          culpa qui officia deserunt mollit anim id est
+          <!>4 laborum. 4
         </p>
-        <div>7 on the nose</div>
+        <div>4 on the nose</div>
         <div>
-          <button>+</button>
-          <button>-</button>
+          <button onclick="">+</button>
+          <button onclick="">-</button>
         </div>
-        <p style="font-size: 14px">#7</p>
+        <p style="font-size: 8px">#4</p>
         <dl>
-          <dt>7</dt>
+          <dt>4</dt>
           <dd>Line 1</dd>
-          <dt>7</dt>
+          <dt>4</dt>
           <dd>Line 2</dd>
-          <dt>7</dt>
+          <dt>4</dt>
           <dd>Line 3</dd>
-          <dt>7</dt>
+          <dt>4</dt>
           <dd>Line 4</dd>
-          <dt>7</dt>
-          <dd>Line 5</dd>
-          <dt>7</dt>
-          <dd>Line 6</dd>
-          <dt>7</dt>
-          <dd>Line 7</dd>
         </dl>
       </div>
     </div>
