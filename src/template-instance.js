@@ -95,7 +95,7 @@ export const parse = (element, parts = []) => {
         }
 
         node.replaceWith(
-          ...items.flatMap((part) => part.replacementNodes || [part])
+          ...items.flatMap((part) => part.replacementNodes || part)
         );
       }
     }
