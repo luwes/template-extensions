@@ -25,7 +25,9 @@
         enhance(getTemplate(props), window.container);
         console.timeEnd('enhance');
 
-        // console.log(getTemplate(props).toString());
+        console.time('renderToString');
+        console.log(getTemplate(props).toString());
+        console.timeEnd('renderToString');
       };
       run({ count: 4 });
 

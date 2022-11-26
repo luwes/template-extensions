@@ -12,6 +12,9 @@ existing elements (from SSR/SSG) with these dynamic parts.
 ## Examples
 
  - [TodoMVC](https://github.com/luwes/template-extensions-todomvc)
+ - [Create your own UI library](./examples/interhtml.js)
+
+## Usage
 
 ### Simple render
 

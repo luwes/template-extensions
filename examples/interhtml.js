@@ -1,5 +1,6 @@
 /* Example UI library (InterHTML) that can be built with Template Extensions */
 /* Adapted from https://github.com/github/jtml - MIT - Keith Cirkel */
+/* Demo: https://template-extensions.vercel.app/examples/counter.html */
 
 import {
   TemplateInstance,
