@@ -63,7 +63,7 @@ function createSelectors(parts) {
   const selectors = [];
   for (const [expr, part] of parts) {
     let { attributeName, replacementNodes } = part;
-    let childNodesLength = 1;
+    let childNodesLength;
     let startOffset = 0;
     let node = part.element;
     if (node) {
@@ -74,14 +74,14 @@ function createSelectors(parts) {
       }
     } else {
       // ChildNodePart
-      childNodesLength = getContentChildNodesLength(replacementNodes) ?? 1;
+      childNodesLength = getContentChildNodesLength(replacementNodes);
       node = getContentChildNode(replacementNodes, 0);
       startOffset = getStartOffset(node);
     }
 
     let path = createPath(node);
     let selector = { x: expr, p: path };
-    if (childNodesLength !== 1) selector.n = childNodesLength;
+    if (childNodesLength > 1) selector.n = childNodesLength;
     if (startOffset) selector.o = startOffset;
     if (attributeName) selector.a = attributeName;
     selectors.push(selector);
@@ -110,6 +110,7 @@ function createPath(node) {
     let prevNode = node;
     while ((node = getPreviousContentSibling(node, localName))) {
       if (nodeType === 3) {
+        // Count the adjoining text nodes as 1 block.
         if (node.nodeType === 3 && prevNode.nodeType !== node.nodeType) ++i;
       } else {
         ++i;
