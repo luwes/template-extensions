@@ -1,4 +1,4 @@
-# Template Extensions [![test](https://github.com/luwes/template-extensions/actions/workflows/ci.yml/badge.svg)](https://github.com/luwes/template-extensions/actions/workflows/ci.yml) [![npm version](https://img.shields.io/npm/v/template-extensions)](http://npmjs.org/template-extensions)
+# Template Extensions [![test](https://github.com/luwes/template-extensions/actions/workflows/ci.yml/badge.svg)](https://github.com/luwes/template-extensions/actions/workflows/ci.yml) [![size](https://img.shields.io/bundlephobia/minzip/template-extensions?label=size)](https://bundlephobia.com/result?p=template-extensions) [![npm version](https://img.shields.io/npm/v/template-extensions)](http://npmjs.org/template-extensions)
 
 The goal of this library is to easily create HTML templates with dynamic parts
 which is covered by the API's based on the
