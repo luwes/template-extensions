@@ -1,4 +1,4 @@
-# Template Extensions
+# Template Extensions [![test](https://github.com/luwes/template-extensions/actions/workflows/ci.yml/badge.svg)](https://github.com/luwes/template-extensions/actions/workflows/ci.yml) [![npm version](https://img.shields.io/npm/v/template-extensions)](http://npmjs.org/template-extensions)
 
 The goal of this library is to easily create HTML templates with dynamic parts
 which is covered by the API's based on the
@@ -10,6 +10,8 @@ In addition it adds new API's to progressively enhance
 existing elements (from SSR/SSG) with these dynamic parts.
 
 ## Examples
+
+ - [TodoMVC](https://github.com/luwes/template-extensions-todomvc)
 
 ### Simple render
 
