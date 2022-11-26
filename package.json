@@ -13,7 +13,7 @@
     "lint": "eslint src",
     "format": "prettier --write . '!dist'",
     "test": "web-test-runner **/*test.js --config test/web-test-runner.config.js",
-    "dev": "esbuild ./interhtml.js --servedir=. --outdir=dist --bundle --format=esm",
+    "dev": "npx serve examples",
     "build": "esbuild ./src/index.js --define:globalThis.PROD=true --tree-shaking=true --minify --sourcemap --outfile=dist/template-extensions.js --bundle --format=esm && yarn size",
     "size": "echo \"\\n  dist/\\033[1mtemplate-extensions.js\\033[0m     \\033[0;32m$(($(cat dist/template-extensions.js | gzip -c9 | wc -c)))B gzip\\033[0m\\n\"",
     "prepublishOnly": "npm run lint && npm run build"

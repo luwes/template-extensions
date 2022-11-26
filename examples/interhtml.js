@@ -6,7 +6,7 @@ import {
   AssignedTemplateInstance,
   ChildNodePart,
   AttrPart,
-} from './src/index.js';
+} from '../src/index.js';
 
 export function render(result, element) {
   result.renderInto(element);
