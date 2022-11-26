@@ -128,24 +128,21 @@ function createParts(childNodes, selectors, state) {
   const parts = [];
   for (let selector of selectors) {
     // console.log(selector);
-    const { p: path, x: expr, a: attrName, o: startOffset = 0 } = selector;
+    const { p: path, x: expr, a: attrName, o: startOffset } = selector;
     const element = getNodeFromXPath(childNodes, path);
     if (!element) continue;
-    let value = state[expr];
     let part;
     if (!attrName) {
-      const nodesLength = selector.n ?? 1;
-      part = createChildNodePart(element, nodesLength, startOffset, value);
+      part = createChildNodePart(element, state[expr], selector.n, startOffset);
     } else {
-      if (typeof state[expr] === 'function') value = '';
-      part = createAttrPart(element, attrName, startOffset, value);
+      part = createAttrPart(element, state[expr], attrName, startOffset);
     }
     parts.push([expr, part]);
   }
   return parts;
 }
 
-function createChildNodePart(element, nodesLength, startOffset, value) {
+function createChildNodePart(element, value, nodesLength = 1, startOffset = 0) {
   let nodes;
   if (element.nodeType === 3) {
     value = stringifyValue(value);
@@ -162,7 +159,7 @@ function createChildNodePart(element, nodesLength, startOffset, value) {
         trimStart
       );
       ({ data } = element);
-      textLen = normalizeIndex((data = data.slice(startOffset)), value.length);
+      textLen = normalizeIndex((data = data.slice(startOffset)), textLen);
       serverValue = data.slice(0, textLen);
     }
 
@@ -185,7 +182,9 @@ function createChildNodePart(element, nodesLength, startOffset, value) {
 
 const attrLists = new WeakMap();
 
-function createAttrPart(element, attrName, startOffset, value) {
+function createAttrPart(element, value, attrName, startOffset = 0) {
+  if (typeof value === 'function') value = '';
+
   const attr = element.attributes[attrName];
   const list = attrLists.get(element)?.[attrName] ?? new AttrPartList();
   if (typeof list.item(list.length - 1) === 'string') {
