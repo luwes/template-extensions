@@ -1,7 +1,7 @@
 /* Adapted from https://github.com/github/jtml - MIT - Keith Cirkel */
 
 import { assert, fixture, expect } from '@open-wc/testing';
-import { html, render, enhance } from '../interhtml.js';
+import { html, render, enhance } from '../examples/interhtml.js';
 
 const test = it;
 const is = assert.deepEqual;
