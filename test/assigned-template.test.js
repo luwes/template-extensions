@@ -2,7 +2,8 @@
 
 import { assert, fixture } from '@open-wc/testing';
 import { AssignedTemplateInstance } from '../src/assigned-template.js';
-import { AttrPart } from '../src/dom-parts.js';
+import { TemplateInstance } from '../src/template-instance.js';
+import { AttrPart, InnerTemplatePart } from '../src/dom-parts.js';
 
 const test = it;
 const is = assert.deepEqual;
@@ -297,4 +298,116 @@ test('update: only toggles attributes with boolean class properties', async () =
   );
   instance.update({ a: false });
   is(root.innerHTML, `<input aria-disabled="false" value="false">`);
+});
+
+test('InnerTemplatePart: simple if condition', async () => {
+  const root = await fixture(`<main><div>xz</div></main>`);
+  const template = document.createElement('template');
+  template.innerHTML = `<div>x<template directive="if" expression="y">yyy</template>z</div>`;
+  const instance = new AssignedTemplateInstance(
+    root,
+    template,
+    { y: false },
+    {
+      processCallback(el, parts, state) {
+        for (const [expression, part] of parts) {
+          if (part instanceof InnerTemplatePart) {
+            if (state[expression]) {
+              part.replace(part.template.innerHTML);
+            } else {
+              part.replace('');
+            }
+          }
+        }
+      },
+    }
+  );
+  is(root.childNodes[0].innerHTML, 'xz');
+
+  instance.update({ y: true });
+  is(root.childNodes[0].innerHTML, 'xyyyz');
+});
+
+test('InnerTemplatePart: if condition', async () => {
+  const root = await fixture(`<main><div></div></main>`);
+  const template = document.createElement('template');
+  template.innerHTML = `<div><template directive="if" expression="y"><section class="main"></section></template></div>`;
+  const instance = new AssignedTemplateInstance(
+    root,
+    template,
+    { y: false },
+    {
+      processCallback(el, parts, state) {
+        for (const [expression, part] of parts) {
+          if (part instanceof InnerTemplatePart) {
+            if (state[expression]) {
+              const fragment = part.parentNode.cloneNode();
+              fragment.innerHTML = part.template.innerHTML;
+              part.replace(fragment.childNodes);
+            } else {
+              part.replace('');
+            }
+          }
+        }
+      },
+    }
+  );
+  is(root.childNodes[0].innerHTML, '');
+
+  instance.update({ y: true });
+  is(root.childNodes[0].innerHTML, '<section class="main"></section>');
+});
+
+test('InnerTemplatePart: foreach directive', async () => {
+  const root = await fixture(`<main><ul><li>a</li><li>b</li></ul></main>`);
+  const liB = root.childNodes[0].childNodes[1];
+  const template = document.createElement('template');
+  template.innerHTML = `<ul><template directive="foreach" expression="x"><li>{{title}}</li></template></ul>`;
+
+  const liInstances = [];
+  const instance = new AssignedTemplateInstance(
+    root,
+    template,
+    { x: [{ title: 'a' }, { title: 'b' }] },
+    {
+      processCallback(tpl, parts, state) {
+        for (const [expression, part] of parts) {
+          if (part instanceof InnerTemplatePart) {
+            if (tpl.assign) {
+              state[expression].forEach((item, i) => {
+                liInstances.push(
+                  new AssignedTemplateInstance(
+                    {
+                      childNodes: [part.replacementNodes[i]],
+                    },
+                    part.template,
+                    item
+                  )
+                );
+              });
+            } else {
+              const nodes = state[expression].map((item) => {
+                return new TemplateInstance(part.template, item);
+              });
+              part.replace(nodes);
+            }
+          } else {
+            if (!tpl.assign) {
+              part.value = state[expression];
+            }
+          }
+        }
+      },
+    }
+  );
+
+  is(root.childNodes[0].innerHTML, '<li>a</li><li>b</li>');
+
+  liInstances[1].update({ title: 'zzzzzz sleep' });
+  is(root.childNodes[0].innerHTML, '<li>a</li><li>zzzzzz sleep</li>');
+
+  is(root.childNodes[0].childNodes[1], liB);
+
+  instance.update({ x: [{ title: 'y' }, { title: 'z' }, { title: 'w' }] });
+  is(root.childNodes[0].innerHTML, '<li>y</li><li>z</li><li>w</li>');
 });

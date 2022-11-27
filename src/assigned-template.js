@@ -1,8 +1,14 @@
-import { AttrPart, ChildNodePart, AttrPartList } from './dom-parts.js';
+import {
+  AttrPart,
+  ChildNodePart,
+  AttrPartList,
+  InnerTemplatePart,
+} from './dom-parts.js';
 import { defaultProcessor, parse } from './template-instance.js';
 
 /**
- * Progressively enhance any DOM element with a template instance, DOM parts and state.
+ * Progressively enhance any DOM element with a template definition and state.
+ * This class creates DOM parts in an existing DOM tree.
  */
 export class AssignedTemplateInstance {
   #parts = [];
@@ -62,7 +68,7 @@ export class AssignedTemplateInstance {
 function createSelectors(parts) {
   const selectors = [];
   for (const [expr, part] of parts) {
-    let { attributeName, replacementNodes } = part;
+    let { attributeName, replacementNodes, template } = part;
     let childNodesLength;
     let startOffset = 0;
     let node = part.element;
@@ -75,15 +81,16 @@ function createSelectors(parts) {
     } else {
       // ChildNodePart
       childNodesLength = getContentChildNodesLength(replacementNodes);
-      node = getContentChildNode(replacementNodes, 0);
+      node = getContentChildNode(replacementNodes, 0) ?? replacementNodes[0];
       startOffset = getStartOffset(node);
     }
 
     let path = createPath(node);
-    let selector = { x: expr, p: path };
+    let selector = { x: expr, v: part.value, p: path };
     if (childNodesLength > 1) selector.n = childNodesLength;
     if (startOffset) selector.o = startOffset;
     if (attributeName) selector.a = attributeName;
+    if (template) selector.t = template.outerHTML;
     selectors.push(selector);
     // console.warn(selector);
   }
@@ -125,29 +132,41 @@ function createPath(node) {
   return `/${path.reverse().join('/')}`;
 }
 
-function createParts(childNodes, selectors, state) {
+function createParts(childNodes, selectors) {
   const parts = [];
   for (let selector of selectors) {
     // console.log(selector);
-    const { p: path, x: expr, a: attrName, o: startOffset } = selector;
+    const {
+      x: expr,
+      p: path,
+      v: value,
+      a: attrName,
+      t: tplHTML,
+      o: offset,
+      n: nodesLength,
+    } = selector;
     const element = getNodeFromXPath(childNodes, path);
     if (!element) continue;
     let part;
     if (!attrName) {
-      part = createChildNodePart(element, state[expr], selector.n, startOffset);
+      part = createChildNodePart(element, value, tplHTML, nodesLength, offset);
     } else {
-      part = createAttrPart(element, state[expr], attrName, startOffset);
+      part = createAttrPart(element, value, attrName, offset);
     }
     parts.push([expr, part]);
   }
   return parts;
 }
 
-function createChildNodePart(element, value, nodesLength = 1, startOffset = 0) {
+function createChildNodePart(
+  element,
+  value,
+  templateHTML,
+  nodesLength = 1,
+  startOffset = 0
+) {
   let nodes;
   if (element.nodeType === 3) {
-    value = stringifyValue(value);
-
     let { data } = element;
     let textLen = value.length;
     let serverValue = data.slice(startOffset, startOffset + textLen);
@@ -177,6 +196,15 @@ function createChildNodePart(element, value, nodesLength = 1, startOffset = 0) {
     nodes = [element];
   } else {
     nodes = getNextChildNodes(element, nodesLength);
+  }
+  if (templateHTML) {
+    const temp = document.createElement('template');
+    temp.innerHTML = templateHTML;
+    return new InnerTemplatePart(
+      nodes[0].parentNode,
+      temp.content.children[0],
+      nodes
+    );
   }
   return new ChildNodePart(nodes[0].parentNode, nodes);
 }
@@ -228,8 +256,16 @@ function getNodeFromXPath(childNodes, xPath) {
     let [type, index] = query.split('[');
     index = index ? parseInt(index) : 1;
 
-    if (type === 'text()') target = getTypeFragment(childNodes, index - 1, 3);
-    else target = getContentChildNode(childNodes, index - 1, type);
+    if (type === 'text()') {
+      let parentNode = target;
+      target = getTypeFragment(childNodes, index - 1, 3);
+      if (!target && index === 1) {
+        // Create a text node if the parentNode has none.
+        parentNode.prepend((target = new Text('')));
+      }
+    } else {
+      target = getContentChildNode(childNodes, index - 1, type);
+    }
 
     if (!globalThis.PROD && !target) {
       console.warn(`Warning: Node path could not be found /${path.join('/')}`);
@@ -239,12 +275,6 @@ function getNodeFromXPath(childNodes, xPath) {
     childNodes = target?.childNodes;
   }
   return target;
-}
-
-function stringifyValue(value) {
-  if (Array.isArray(value)) value = value.join('');
-  else value += '';
-  return value;
 }
 
 // Get the server node and startIndex including whitespace. The startIndex argument coming
