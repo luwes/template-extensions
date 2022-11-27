@@ -201,8 +201,8 @@ export class ChildNodePart extends Part {
 }
 
 export class InnerTemplatePart extends ChildNodePart {
-  constructor(parentNode, template) {
-    super(parentNode);
+  constructor(parentNode, template, nodes) {
+    super(parentNode, nodes);
     this.template = template;
   }
 
