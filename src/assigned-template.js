@@ -37,7 +37,7 @@ export class AssignedTemplateInstance {
     //
     // The selectors include xPath like paths (ignoring whitespace nodes).
     //
-    // format: {x: expression, p: path, o: startOffset, a: attributeName, n: nodesLength}
+    // format: {x: expression, p: path, o: offset, a: attributeName, n: nodesLength}
     //
     //         {x: '0', p: '/div/h1', o: 7, a: 'class'}
     //         {x: '6', p: '/div/div[2]/button[2]', a: 'onclick'}
@@ -50,7 +50,7 @@ export class AssignedTemplateInstance {
     // console.log(selectors);
 
     // console.time('createParts');
-    this.#parts = createParts(element.childNodes, selectors, state);
+    this.#parts = createParts(element, selectors, state);
     // console.timeEnd('createParts');
 
     this.#processor = processor;
@@ -69,28 +69,29 @@ function createSelectors(parts) {
   const selectors = [];
   for (const [expr, part] of parts) {
     let { attributeName, replacementNodes, template } = part;
-    let childNodesLength;
-    let startOffset = 0;
+    let nodesLen;
+    let offset = 0;
     let node = part.element;
     if (node) {
       // AttrPart
       for (let str of part.list) {
         if (str === part) break;
-        startOffset += ('' + str).length;
+        offset += ('' + str).length;
       }
     } else {
       // ChildNodePart
-      childNodesLength = getContentChildNodesLength(replacementNodes);
+      nodesLen = getContentChildNodesLength(replacementNodes);
       node = getContentChildNode(replacementNodes, 0) ?? replacementNodes[0];
-      startOffset = getStartOffset(node);
+      offset = getStartOffset(node);
     }
 
     let path = createPath(node);
-    let selector = { x: expr, v: part.value, p: path };
-    if (childNodesLength > 1) selector.n = childNodesLength;
-    if (startOffset) selector.o = startOffset;
+    let selector = { p: path, x: expr };
+    if (nodesLen > 1) selector.n = nodesLen;
+    if (offset) selector.o = offset;
     if (attributeName) selector.a = attributeName;
     if (template) selector.t = template.outerHTML;
+    selector.v = part.value;
     selectors.push(selector);
     // console.warn(selector);
   }
@@ -119,12 +120,13 @@ function createPath(node) {
       if (nodeType === 3) {
         // Count the adjoining text nodes as 1 block.
         if (node.nodeType === 3 && prevNode.nodeType !== node.nodeType) ++i;
+        else if (node.nodeType !== 3) ++i;
       } else {
         ++i;
       }
       prevNode = node;
     }
-    let type = localName ?? 'text()';
+    let type = localName ?? '*';
     path.push(!i ? type : `${type}[${i + 1}]`);
     node = parentNode;
     ({ parentNode } = node);
@@ -132,7 +134,7 @@ function createPath(node) {
   return `/${path.reverse().join('/')}`;
 }
 
-function createParts(childNodes, selectors) {
+function createParts(element, selectors) {
   const parts = [];
   for (let selector of selectors) {
     // console.log(selector);
@@ -143,43 +145,35 @@ function createParts(childNodes, selectors) {
       a: attrName,
       t: tplHTML,
       o: offset,
-      n: nodesLength,
+      n: nodesLen,
     } = selector;
-    const element = getNodeFromXPath(childNodes, path);
-    if (!element) continue;
+
+    const node = getNodeFromXPath(element, path);
+    if (!node) continue;
+
     let part;
     if (!attrName) {
-      part = createChildNodePart(element, value, tplHTML, nodesLength, offset);
+      part = createChildNodePart(node, value, tplHTML, nodesLen, offset);
     } else {
-      part = createAttrPart(element, value, attrName, offset);
+      part = createAttrPart(node, value, attrName, offset);
     }
     parts.push([expr, part]);
   }
   return parts;
 }
 
-function createChildNodePart(
-  element,
-  value,
-  templateHTML,
-  nodesLength = 1,
-  startOffset = 0
-) {
+function createChildNodePart(node, value, tplHTML, nodesLen = 1, offset = 0) {
   let nodes;
-  if (element.nodeType === 3) {
-    let { data } = element;
+  if (node.nodeType === 3) {
+    let { data } = node;
     let textLen = value.length;
-    let serverValue = data.slice(startOffset, startOffset + textLen);
+    let serverValue = data.slice(offset, offset + textLen);
 
     if (value !== serverValue) {
-      const trimStart = !element.previousSibling;
-      [element, startOffset] = normalizeNodeIndex(
-        element,
-        startOffset,
-        trimStart
-      );
-      ({ data } = element);
-      textLen = normalizeIndex((data = data.slice(startOffset)), textLen);
+      const trimStart = !node.previousSibling;
+      [node, offset] = normalizeNodeIndex(node, offset, trimStart);
+      ({ data } = node);
+      textLen = normalizeIndex((data = data.slice(offset)), textLen);
       serverValue = data.slice(0, textLen);
     }
 
@@ -190,16 +184,16 @@ function createChildNodePart(
     }
 
     // The ChildNodePart's require the adjoining text to split up.
-    element = element.splitText(startOffset);
-    element.splitText(textLen);
+    if (node.length >= offset) node = node.splitText(offset);
+    if (node.length >= textLen) node.splitText(textLen);
 
-    nodes = [element];
+    nodes = [node];
   } else {
-    nodes = getNextChildNodes(element, nodesLength);
+    nodes = getNextChildNodes(node, nodesLen);
   }
-  if (templateHTML) {
+  if (tplHTML) {
     const temp = document.createElement('template');
-    temp.innerHTML = templateHTML;
+    temp.innerHTML = tplHTML;
     return new InnerTemplatePart(
       nodes[0].parentNode,
       temp.content.children[0],
@@ -211,21 +205,21 @@ function createChildNodePart(
 
 const attrLists = new WeakMap();
 
-function createAttrPart(element, value, attrName, startOffset = 0) {
+function createAttrPart(node, value, attrName, offset = 0) {
   if (typeof value === 'function') value = '';
 
-  const attr = element.attributes[attrName];
-  const list = attrLists.get(element)?.[attrName] ?? new AttrPartList();
+  const attr = node.attributes[attrName];
+  const list = attrLists.get(node)?.[attrName] ?? new AttrPartList();
   if (typeof list.item(list.length - 1) === 'string') {
     list.splice(list.length - 1, 1);
   }
-  attrLists.set(element, { [attrName]: list });
-  if (startOffset > 0) {
-    list.append(attr?.value.slice(`${list}`.length, startOffset));
+  attrLists.set(node, { [attrName]: list });
+  if (offset > 0) {
+    list.append(attr?.value.slice(`${list}`.length, offset));
   }
 
   const valueLength = `${value}`.length;
-  let serverValue = attr?.value.slice(startOffset, startOffset + valueLength);
+  let serverValue = attr?.value.slice(offset, offset + valueLength);
   if (typeof value === 'boolean' && !attr?.value?.length) {
     serverValue = attr?.value == '';
   }
@@ -236,7 +230,7 @@ function createAttrPart(element, value, attrName, startOffset = 0) {
     );
   }
 
-  const part = new AttrPart(element, attrName, attr?.namespaceURI, value);
+  const part = new AttrPart(node, attrName, attr?.namespaceURI, value);
   list.append(part);
 
   const suffix = attr?.value.slice(`${list}`.length);
@@ -245,8 +239,8 @@ function createAttrPart(element, value, attrName, startOffset = 0) {
   return part;
 }
 
-function getNodeFromXPath(childNodes, xPath) {
-  let target;
+function getNodeFromXPath(target, xPath) {
+  let { childNodes } = target;
   let path = xPath.split('/');
   // todo: support id attribute selector for a fast path?
   // https://devhints.io/xpath
@@ -256,12 +250,14 @@ function getNodeFromXPath(childNodes, xPath) {
     let [type, index] = query.split('[');
     index = index ? parseInt(index) : 1;
 
-    if (type === 'text()') {
+    if (type === '*') {
       let parentNode = target;
-      target = getTypeFragment(childNodes, index - 1, 3);
-      if (!target && index === 1) {
-        // Create a text node if the parentNode has none.
-        parentNode.prepend((target = new Text('')));
+      target = getContentChildNode(childNodes, index - 1);
+      // Create a text node if the parentNode has none.
+      if (parentNode && target && target.nodeType !== 3) {
+        target = target.parentNode.insertBefore(new Text(''), target);
+      } else if (parentNode && !target) {
+        target = parentNode.appendChild(new Text(''));
       }
     } else {
       target = getContentChildNode(childNodes, index - 1, type);
@@ -348,27 +344,20 @@ function isIgnorable(node) {
   );
 }
 
-// This makes adjoining elements with the same type 1 fragment, counted as 1.
-// For example adjoining text nodes are seen as 1 big text node. This is required
-// because the DOM parts require the text nodes to be split up so we need to see
-// it as 1 big text node to calculate the startOffset for creating new DOM parts.
-function getTypeFragment(childNodes, index, type) {
+// Adjoining text nodes are seen as 1 text node, counted as 1.
+function getContentChildNode(childNodes, index, type) {
   let i = -1;
   let counted = false;
   for (let n of childNodes) {
-    if (n.nodeType !== type) counted = false;
-    if (!counted && (n.localName ?? n.nodeType) === type && !isIgnorable(n)) {
-      ++i;
-      counted = true;
+    if (n.nodeType !== 3) counted = false;
+    if ((!type || (n.localName ?? n.nodeType) === type) && !isIgnorable(n)) {
+      if (!counted && n.nodeType === 3) {
+        ++i;
+        counted = true;
+      } else if (n.nodeType !== 3) {
+        ++i;
+      }
     }
-    if (i === index) return n;
-  }
-}
-
-function getContentChildNode(childNodes, index, type) {
-  let i = -1;
-  for (let n of childNodes) {
-    if ((!type || (n.localName ?? n.nodeType) === type) && !isIgnorable(n)) ++i;
     if (i === index) return n;
   }
 }
