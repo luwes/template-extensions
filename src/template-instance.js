@@ -1,14 +1,15 @@
-/* Adapted from https://github.com/dy/template-parts - ISC - Dmitry Iv. */
+/* global AttrPart, AttrPartList, ChildNodePart, InnerTemplatePart */
 
-// Template Instance API
-// https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md
+/**
+ * Adapted from https://github.com/dy/template-parts
+ * ISC License (ISC)
+ * Copyright 2021 Dmitry Iv.
+ */
 
-import {
-  AttrPart,
-  AttrPartList,
-  ChildNodePart,
-  InnerTemplatePart,
-} from './dom-parts.js';
+/**
+ * Template Instance API
+ * https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md
+ */
 
 const ELEMENT = 1,
   STRING = 0,
@@ -43,6 +44,7 @@ export class TemplateInstance extends DocumentFragment {
 
   constructor(template, state, processor = defaultProcessor) {
     super();
+
     this.append(template.content.cloneNode(true));
     this.#parts = parse(this);
 
@@ -54,6 +56,10 @@ export class TemplateInstance extends DocumentFragment {
   update(state) {
     this.#processor.processCallback(this, this.#parts, state);
   }
+}
+
+if (!globalThis.TemplateInstance) {
+  globalThis.TemplateInstance = TemplateInstance;
 }
 
 // collect element parts
@@ -81,14 +87,14 @@ export const parse = (element, parts = []) => {
         const items = [];
         if (node.data) {
           for (let [type, value] of tokenize(node.data)) {
-            if (!type) items.push(new Text(value));
+            if (!type) items.push(value);
             else {
               const part = new ChildNodePart(element);
               items.push(part);
               parts.push([value, part]);
             }
           }
-        } else {
+        } else if (node instanceof HTMLTemplateElement) {
           const part = new InnerTemplatePart(element, node);
           items.push(part);
           parts.push([part.expression, part]);
