@@ -62,11 +62,13 @@ test('create: can render into many values', () => {
 
 test('update: performs noop when update() is called with partial args', () => {
   const instance = render(
-    `<div class="my-{{ x }}-state {{ y }}">{{ z }}</div>`, {
+    `<div class="my-{{ x }}-state {{ y }}">{{ z }}</div>`,
+    {
       x: 'foo',
       y: 'bar',
       z: 'baz',
-    });
+    }
+  );
 
   is(String(instance), `<div class="my-foo-state bar">baz</div>`);
 
@@ -76,11 +78,13 @@ test('update: performs noop when update() is called with partial args', () => {
 
 test('update: performs noop when update() is called with partial args', () => {
   const instance = render(
-    `<div class="my-{{ x }}-state {{ y }}">{{ z }}</div>`, {
+    `<div class="my-{{ x }}-state {{ y }}">{{ z }}</div>`,
+    {
       x: 'foo',
       y: 'bar',
       z: 'baz',
-    });
+    }
+  );
 
   is(String(instance), `<div class="my-foo-state bar">baz</div>`);
 
@@ -92,27 +96,55 @@ test('innerTemplatePart: full form', () => {
   let arr = [];
   let instance;
 
-  is(renderToString(
-    `<template directive="x" expression="x">{{ x }}</template>`,
-    { x: ['x', 'y'] },
-    {
-      processCallback(insta, parts, state) {
-        instance = insta;
-        for (const [expression, part] of parts) {
-          arr.push(part.directive);
-          arr.push(part.expression);
-          const nodes = state[expression].map((item) => {
-            //console.log(part.template);
-            return new TemplateInstance(part.template, { x: item });
-          });
-          //console.log(nodes);
-          part.replace(nodes);
-        }
-      },
-    }
-  ), 'xy');
+  is(
+    renderToString(
+      `<template directive="x" expression="x">{{ x }}</template>`,
+      { x: ['x', 'y'] },
+      {
+        processCallback(insta, parts, state) {
+          instance = insta;
+          for (const [expression, part] of parts) {
+            arr.push(part.directive);
+            arr.push(part.expression);
+            const nodes = state[expression].map((item) => {
+              //console.log(part.template);
+              return new TemplateInstance(part.template, { x: item });
+            });
+            //console.log(nodes);
+            part.replace(nodes);
+          }
+        },
+      }
+    ),
+    'xy'
+  );
   is(arr, ['x', 'x']);
 
   instance.update({ x: ['y', 'z', 'w'] });
   is(String(instance), 'yzw');
+});
+
+test('InnerTemplatePart: foreach directive', async () => {
+  const processor = {
+    processCallback(tpl, parts, state) {
+      for (const [expression, part] of parts) {
+        if (part instanceof InnerTemplatePart) {
+          const nodes = (state[expression] ?? []).map((item) => {
+            return new TemplateInstance(part.template, item, processor);
+          });
+          part.replace(nodes);
+        } else {
+          part.value = state[expression];
+        }
+      }
+    },
+  };
+
+  const instance = render(
+    `<ul><template directive="foreach" expression="x"><li>{{title}}</li></template></ul>`,
+    { x: [{ title: 'a' }, { title: 'b' }] },
+    processor
+  );
+
+  is(String(instance), '<ul><li>a</li><li>b</li></ul>');
 });

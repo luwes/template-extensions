@@ -43,6 +43,10 @@ function cloneTemplate(template) {
 
   const cloneNode = (node, parent) => {
     if (isPlainObject(node)) {
+      if (node.comment) {
+        return { comment: node.comment };
+      }
+
       const result = {
         tag: node.tag,
         attributes: {},
@@ -75,7 +79,7 @@ function cloneTemplate(template) {
     }
 
     if (Array.isArray(node)) {
-      const [, part] = parts.find(([, p]) => p.replacementNodes === node);
+      const [, part] = parts.find(([, p]) => p.replacementNodes === node) ?? [];
 
       if (part instanceof InnerTemplatePart) {
         return replacePart(part, new InnerTemplatePart(parent, part.template))

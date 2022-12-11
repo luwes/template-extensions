@@ -50,13 +50,6 @@ export class TreeBuilder {
   }
 
   appendChild(parent, child) {
-    if (this.current !== parent && parent.attributes.directive) {
-      const current = this.current;
-      this.current = parent;
-      this.current.previous = current;
-      this.current.parts ||= [];
-    }
-
     if (isInterpolation(child)) {
       const part = new ChildNodePart(parent);
       this.current.parts.push([this.expressions.shift(), part]);
@@ -83,6 +76,13 @@ export class TreeBuilder {
   }
 
   setAttribute(node, name, value) {
+    if (this.current !== node && name === 'directive') {
+      const current = this.current;
+      this.current = node;
+      this.current.previous = current;
+      this.current.parts ||= [];
+    }
+
     if (Array.isArray(value)) {
       const list = new AttrPartList();
       for (let i = 0; i < value.length; ++i) {
