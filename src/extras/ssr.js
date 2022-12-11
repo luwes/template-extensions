@@ -1,6 +1,6 @@
 import { createTag } from './htmltag.js';
 import { TreeBuilder } from './tree-builder.js';
-import { defaultProcessor } from '../template-instance.js';
+import { defaultProcessor } from '../template-processor.js';
 import { TemplateInstance } from './ssr-template-instance.js';
 
 export { TemplateInstance };
