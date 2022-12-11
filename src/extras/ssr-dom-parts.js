@@ -1,27 +1,7 @@
-/**
- * DOM Part API
- * https://github.com/WICG/webcomponents/blob/gh-pages/proposals/DOM-Parts.md
- *
- * Divergence from the proposal:
- *   - Renamed AttributePart to AttrPart to match the existing class `Attr`.
- *   - Renamed AttributePartGroup to AttrPartList as a group feels not ordered
- *     while this collection should maintain its order. Also closer to DOMTokenList.
- *   - A ChildNodePartGroup would make things unnecessarily difficult in this
- *     implementation. Instead an empty text node keeps track of the ChildNodePart's
- *     location in the child nodelist if needed.
- *   - No concept of part.commit() and batching.
- */
-
-const FRAGMENT = 11;
-
 export class Part {
   toString() {
     return this.value;
   }
-}
-
-if (!globalThis.Part) {
-  globalThis.Part = Part;
 }
 
 export class AttrPartList {
@@ -42,6 +22,7 @@ export class AttrPartList {
 
   append(...items) {
     for (const item of items) {
+      // heads up! this is a SSR AttrPart
       if (item instanceof AttrPart) {
         AttrPartList.attrPartToList.set(item, this);
       }
@@ -56,10 +37,6 @@ export class AttrPartList {
   toString() {
     return this.#items.join('');
   }
-}
-
-if (!globalThis.AttrPartList) {
-  globalThis.AttrPartList = AttrPartList;
 }
 
 export class AttrPart extends Part {
@@ -104,31 +81,17 @@ export class AttrPart extends Part {
     if (!this.list || this.list.length === 1) {
       // fully templatized
       if (newValue == null) {
-        this.#element.removeAttributeNS(
-          this.#namespaceURI,
-          this.#attributeName
-        );
+        delete this.#element.attributes[this.#attributeName];
       } else {
-        this.#element.setAttributeNS(
-          this.#namespaceURI,
-          this.#attributeName,
-          newValue
-        );
+        this.#element.attributes[this.#attributeName] = newValue;
       }
     } else {
-      this.#element.setAttributeNS(
-        this.#namespaceURI,
-        this.#attributeName,
-        this.list
-      );
+      this.#element.attributes[this.#attributeName] = String(this.list);
     }
   }
 
   get booleanValue() {
-    return this.#element.hasAttributeNS(
-      this.#namespaceURI,
-      this.#attributeName
-    );
+    return !!this.#element.attributes[this.#attributeName];
   }
 
   set booleanValue(value) {
@@ -139,10 +102,6 @@ export class AttrPart extends Part {
   }
 }
 
-if (!globalThis.AttrPart) {
-  globalThis.AttrPart = AttrPart;
-}
-
 export class ChildNodePart extends Part {
   #parentNode;
   #nodes;
@@ -151,7 +110,7 @@ export class ChildNodePart extends Part {
     super();
     this.#parentNode = parentNode;
     if (nodes) this.#nodes = [...nodes];
-    else this.#nodes = [new Text()];
+    else this.#nodes = [];
   }
 
   get replacementNodes() {
@@ -184,35 +143,12 @@ export class ChildNodePart extends Part {
     const normalisedNodes = nodes
       .flat()
       .flatMap((node) =>
-        node == null
-          ? [new Text()]
-          : node.forEach
-          ? [...node]
-          : node.nodeType === FRAGMENT
-          ? [...node.childNodes]
-          : node.nodeType
-          ? [node]
-          : [new Text(node)]
+        node == null ? [] : node.forEach ? [...node] : [node]
       );
 
-    if (!normalisedNodes.length) {
-      normalisedNodes.push(new Text(''));
-    }
-
-    this.#nodes[0].before(...normalisedNodes);
-
-    for (const oldNode of this.#nodes) {
-      if (!normalisedNodes.includes(oldNode)) {
-        oldNode.remove();
-      }
-    }
-
-    this.#nodes = normalisedNodes;
+    this.#nodes.length = 0;
+    this.#nodes.push(...normalisedNodes);
   }
-}
-
-if (!globalThis.ChildNodePart) {
-  globalThis.ChildNodePart = ChildNodePart;
 }
 
 export class InnerTemplatePart extends ChildNodePart {
@@ -222,20 +158,13 @@ export class InnerTemplatePart extends ChildNodePart {
   }
 
   get directive() {
-    return (
-      this.template.getAttribute('directive') ??
-      this.template.getAttribute('type')
-    );
+    return this.template.attributes.directive ?? this.template.attributes.type;
   }
 
   get expression() {
     return (
-      this.template.getAttribute('expression') ??
-      this.template.getAttribute(this.directive)
+      this.template.attributes.expression ??
+      this.template.attributes[this.directive]
     );
   }
-}
-
-if (!globalThis.InnerTemplatePart) {
-  globalThis.InnerTemplatePart = InnerTemplatePart;
 }
