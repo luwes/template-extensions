@@ -1,4 +1,4 @@
-import { defaultProcessor } from '../template-instance.js';
+import { defaultProcessor } from '../template-processor.js';
 import { renderTree } from './tree-render.js';
 import {
   AttrPart,
