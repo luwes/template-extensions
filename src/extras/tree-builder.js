@@ -108,7 +108,7 @@ export class TreeBuilder {
   }
 
   setAttributeParts(node, name, parts) {
-    parts = parts.filter(val => val != '');
+    parts = parts.filter(value => value !== '');
     this.setAttribute(node, name, parts);
   }
 }
