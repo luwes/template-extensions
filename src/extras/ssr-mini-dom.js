@@ -1,14 +1,14 @@
 export class Node {
-  nodeType;
-  nodeName;
   nodeValue;
   childNodes = [];
 
+  constructor(nodeName, nodeType) {
+    this.nodeName = nodeName;
+    this.nodeType = nodeType;
+  }
+
   cloneNode() {
-    const node = new Node();
-    node.nodeType = this.nodeType;
-    node.nodeName = this.nodeName;
-    return node;
+    return new Node(this.nodeName, this.nodeType);
   }
 
   appendChild(node) {
@@ -23,18 +23,25 @@ export class Node {
 }
 
 export class Comment extends Node {
-  nodeType = 8;
-  nodeName = '#comment';
+  constructor(nodeValue = '') {
+    super('#comment', 8);
+    this.nodeValue = nodeValue;
+  }
+
+  toString() {
+    return `<!--${this.nodeValue}-->`;
+  }
 }
 
 export class Element extends Node {
-  nodeType = 1;
   attributes = {};
 
+  constructor(nodeName) {
+    super(nodeName, 1);
+  }
+
   cloneNode() {
-    const element = new Element();
-    element.nodeType = this.nodeType;
-    element.nodeName = this.nodeName;
+    const element = new Element(this.nodeName);
     for (let name in this.attributes) {
       element.attributes[name] = this.attributes[name];
     }

@@ -4,7 +4,7 @@ import {
   AttrPartList,
   ChildNodePart,
   InnerTemplatePart,
-} from './ssr-dom-parts.js';
+} from './ssr.js';
 
 class Interpolation {
   constructor(value) {
@@ -35,9 +35,7 @@ export class TreeBuilder {
   }
 
   createElement(nodeName) {
-    const element = new Element();
-    element.nodeName = nodeName;
-    return element;
+    return new Element(nodeName);
   }
 
   finishElement(node) {
@@ -49,9 +47,7 @@ export class TreeBuilder {
   }
 
   createComment(text) {
-    const comment = new Comment();
-    comment.nodeValue = text;
-    return comment;
+    return new Comment(text);
   }
 
   appendChild(parent, child) {
