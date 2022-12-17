@@ -1,11 +1,10 @@
+import { defaultProcessor, parse } from './template-instance.js';
 import {
   AttrPart,
   ChildNodePart,
   AttrPartList,
   InnerTemplatePart,
 } from './dom-parts.js';
-import { defaultProcessor } from './template-processor.js';
-import { parse } from './template-instance.js';
 
 /**
  * Progressively enhance any DOM element with a template definition and state.

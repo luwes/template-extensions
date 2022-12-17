@@ -1,4 +1,9 @@
-/* global AttrPart, AttrPartList, ChildNodePart, InnerTemplatePart */
+import {
+  AttrPart,
+  ChildNodePart,
+  AttrPartList,
+  InnerTemplatePart,
+} from './dom-parts.js';
 
 /**
  * Adapted from https://github.com/dy/template-parts
@@ -11,11 +16,34 @@
  * https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md
  */
 
-import { defaultProcessor } from './template-processor.js';
-
 const ELEMENT = 1,
   STRING = 0,
   PART = 1;
+
+export const defaultProcessor = {
+  processCallback(instance, parts, state) {
+    if (!state) return;
+    for (const [expression, part] of parts) {
+      if (expression in state) {
+        const value = state[expression];
+        // boolean attr
+        if (
+          typeof value === 'boolean' &&
+          part instanceof AttrPart &&
+          typeof part.element[part.attributeName] === 'boolean'
+        ) {
+          part.booleanValue = value;
+        } else if (typeof value === 'function' && part instanceof AttrPart) {
+          part.element[part.attributeName] = value;
+        } else {
+          part.value = value;
+        }
+      }
+    }
+  },
+};
+
+const DocumentFragment = globalThis.DocumentFragment ?? class {};
 
 export class TemplateInstance extends DocumentFragment {
   #parts;
@@ -24,8 +52,10 @@ export class TemplateInstance extends DocumentFragment {
   constructor(template, state, processor = defaultProcessor) {
     super();
 
-    this.append(template.content.cloneNode(true));
-    this.#parts = parse(this);
+    if (!(this.#parts = this.cached?.(template))) {
+      this.append(template.content.cloneNode(true));
+      this.#parts = parse(this);
+    }
 
     this.#processor = processor;
     processor.createCallback?.(this, this.#parts, state);
@@ -35,10 +65,6 @@ export class TemplateInstance extends DocumentFragment {
   update(state) {
     this.#processor.processCallback(this, this.#parts, state);
   }
-}
-
-if (!globalThis.TemplateInstance) {
-  globalThis.TemplateInstance = TemplateInstance;
 }
 
 // collect element parts
