@@ -1,5 +1,6 @@
-import { defaultProcessor } from '../template-processor.js';
+import { defaultProcessor, TemplateInstance } from '../template-instance.js';
 import { renderTree } from './tree-render.js';
+import { Element, Comment } from './ssr-mini-dom.js';
 import {
   AttrPart,
   AttrPartList,
@@ -7,27 +8,23 @@ import {
   InnerTemplatePart,
 } from './ssr-dom-parts.js';
 
-export class TemplateInstance {
-  #processor;
+TemplateInstance.prototype.cached = function (template) {
+  const { parts, childNodes, attributes } = cloneTemplate(template);
 
-  constructor(template, state, processor = defaultProcessor) {
-    Object.assign(this, cloneTemplate(template));
+  Object.defineProperties(this, {
+    nodeName: { get: () => '#document-fragment' },
+    childNodes: { get: () => childNodes },
+    attributes: { get: () => attributes },
+  });
 
-    this.tag = '#document-fragment';
+  return parts;
+};
 
-    this.#processor = processor;
-    processor.createCallback?.(this, this.parts, state);
-    processor.processCallback(this, this.parts, state);
-  }
+TemplateInstance.prototype.toString = function () {
+  return renderTree(this);
+};
 
-  update(state) {
-    this.#processor.processCallback(this, this.parts, state);
-  }
-
-  toString() {
-    return renderTree(this);
-  }
-}
+export { defaultProcessor, TemplateInstance };
 
 // The template has to be cloned because InnerTemplatePart's can be used
 // multiple times like a foreach directive. The DOM parts have to be unique
@@ -42,26 +39,25 @@ function cloneTemplate(template) {
   };
 
   const cloneNode = (node, parent) => {
-    if (isPlainObject(node)) {
-      if (node.comment) {
-        return { comment: node.comment };
-      }
+    if (node instanceof Comment) {
+      const comment = new Comment();
+      comment.nodeValue = node.nodeValue;
+      return comment;
+    }
 
-      const result = {
-        tag: node.tag,
-        attributes: {},
-        children: [],
-      };
+    if (node instanceof Element) {
+      const element = new Element();
+      element.nodeName = node.nodeName;
 
       for (let name in node.attributes) {
-        result.attributes[name] = cloneNode(node.attributes[name], result);
+        element.attributes[name] = cloneNode(node.attributes[name], element);
       }
 
-      for (let child of node.children) {
-        result.children.push(cloneNode(child, result));
+      for (let child of node.childNodes) {
+        element.childNodes.push(cloneNode(child, element));
       }
 
-      return result;
+      return element;
     }
 
     if (node instanceof AttrPartList) {
@@ -82,12 +78,15 @@ function cloneTemplate(template) {
       const [, part] = parts.find(([, p]) => p.replacementNodes === node) ?? [];
 
       if (part instanceof InnerTemplatePart) {
-        return replacePart(part, new InnerTemplatePart(parent, part.template))
-          .replacementNodes;
+        return replacePart(
+          part,
+          new InnerTemplatePart(parent, part.template, [])
+        ).replacementNodes;
       }
 
       if (part instanceof ChildNodePart) {
-        return replacePart(part, new ChildNodePart(parent)).replacementNodes;
+        return replacePart(part, new ChildNodePart(parent, []))
+          .replacementNodes;
       }
     }
 
@@ -98,19 +97,4 @@ function cloneTemplate(template) {
     parts,
     ...cloneNode(template),
   };
-}
-
-function isPlainObject(value) {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const prototype = Object.getPrototypeOf(value);
-  return (
-    (prototype === null ||
-      prototype === Object.prototype ||
-      Object.getPrototypeOf(prototype) === null) &&
-    !(Symbol.toStringTag in value) &&
-    !(Symbol.iterator in value)
-  );
 }

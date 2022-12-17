@@ -1,27 +1,28 @@
 export function renderTree(node) {
-  let { tag, attributes, children, comment } = node;
 
-  if (tag === '#document-fragment') {
-    return children.flatMap(renderTree).join('');
+  if (node.nodeName === '#comment') {
+    return `<!--${esc(node.nodeValue)}-->`;
   }
 
-  if (tag) {
+  let { nodeName, attributes, childNodes } = node;
+
+  if (nodeName === '#document-fragment') {
+    return childNodes.flatMap(renderTree).join('');
+  }
+
+  if (nodeName) {
     attributes = toAttributes(attributes);
 
     let pairs = Object.keys(attributes).map((k) => {
       return esc(k) + '="' + esc(attributes[k]) + '"';
     });
 
-    let open = tag;
+    let open = nodeName;
     if (pairs.length > 0) {
       open += ' ' + pairs.join(' ');
     }
 
-    return `<${open}>${children.flatMap(renderTree).join('')}</${tag}>`;
-  }
-
-  if (comment) {
-    return `<!--${esc(comment)}-->`;
+    return `<${open}>${childNodes.flatMap(renderTree).join('')}</${nodeName}>`;
   }
 
   if (Array.isArray(node)) {

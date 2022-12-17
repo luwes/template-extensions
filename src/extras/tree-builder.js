@@ -1,3 +1,4 @@
+import { Element, Comment } from './ssr-mini-dom.js';
 import {
   AttrPart,
   AttrPartList,
@@ -33,8 +34,10 @@ export class TreeBuilder {
     return root;
   }
 
-  createElement(tag) {
-    return { tag, attributes: {}, children: [] };
+  createElement(nodeName) {
+    const element = new Element();
+    element.nodeName = nodeName;
+    return element;
   }
 
   finishElement(node) {
@@ -46,29 +49,31 @@ export class TreeBuilder {
   }
 
   createComment(text) {
-    return { comment: text };
+    const comment = new Comment();
+    comment.nodeValue = text;
+    return comment;
   }
 
   appendChild(parent, child) {
     if (isInterpolation(child)) {
-      const part = new ChildNodePart(parent);
+      const part = new ChildNodePart(parent, []);
       this.current.parts.push([this.expressions.shift(), part]);
-      parent.children.push(part.replacementNodes);
+      parent.childNodes.push(part.replacementNodes);
       return;
     }
 
     if (
-      child?.tag === 'template' &&
+      child?.nodeName === 'template' &&
       child.attributes.directive &&
       child.attributes.expression
     ) {
-      const part = new InnerTemplatePart(parent, child);
+      const part = new InnerTemplatePart(parent, child, []);
       this.current.parts.push([part.expression, part]);
-      parent.children.push(part.replacementNodes);
+      parent.childNodes.push(part.replacementNodes);
       return;
     }
 
-    parent.children.push(child);
+    parent.childNodes.push(child);
   }
 
   mapValue(v) {
