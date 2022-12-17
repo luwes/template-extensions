@@ -3,19 +3,8 @@ import {
   renderToString,
   render,
   TemplateInstance,
-  AttrPart,
-  ChildNodePart,
   InnerTemplatePart,
 } from '../src/extras/ssr.js';
-
-// patch global with the SSR DOM part versions
-// this is required if you want to use 1 template processor for client and server
-Object.assign(globalThis, {
-  TemplateInstance,
-  AttrPart,
-  ChildNodePart,
-  InnerTemplatePart,
-});
 
 const test = it;
 const is = assert.deepEqual;

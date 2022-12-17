@@ -20,10 +20,6 @@ export class Part {
   }
 }
 
-if (!globalThis.Part) {
-  globalThis.Part = Part;
-}
-
 export class AttrPartList {
   static attrPartToList = new WeakMap();
   #items = [];
@@ -56,10 +52,6 @@ export class AttrPartList {
   toString() {
     return this.#items.join('');
   }
-}
-
-if (!globalThis.AttrPartList) {
-  globalThis.AttrPartList = AttrPartList;
 }
 
 export class AttrPart extends Part {
@@ -134,13 +126,9 @@ export class AttrPart extends Part {
   set booleanValue(value) {
     if (!this.list || this.list.length === 1) this.value = value ? '' : null;
     else if (!globalThis.PROD) {
-      throw new DOMException('Value is not fully templatized');
+      throw new Error('Value is not fully templatized');
     }
   }
-}
-
-if (!globalThis.AttrPart) {
-  globalThis.AttrPart = AttrPart;
 }
 
 export class ChildNodePart extends Part {
@@ -209,10 +197,12 @@ export class ChildNodePart extends Part {
 
     this.#nodes = normalisedNodes;
   }
-}
 
-if (!globalThis.ChildNodePart) {
-  globalThis.ChildNodePart = ChildNodePart;
+  replaceHTML(html) {
+    const fragment = this.parentNode.cloneNode();
+    fragment.innerHTML = html;
+    this.replace(fragment.childNodes);
+  }
 }
 
 export class InnerTemplatePart extends ChildNodePart {
@@ -234,8 +224,4 @@ export class InnerTemplatePart extends ChildNodePart {
       this.template.getAttribute(this.directive)
     );
   }
-}
-
-if (!globalThis.InnerTemplatePart) {
-  globalThis.InnerTemplatePart = InnerTemplatePart;
 }
