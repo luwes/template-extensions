@@ -36,6 +36,9 @@ const {
 
 const $tokens = Symbol('tokens');
 
+const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr',
+  'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+
 const ESC_RE = /&(?:(lt|gt|amp|quot)|#([0-9]+)|#x([0-9a-f]+));?/ig;
 const NAMED_REFS = { lt: '<', gt: '>', amp: '&', quot: '"' };
 
@@ -159,7 +162,7 @@ export class Parser {
           hasEscape = false;
           a = b;
         }
-        if (rmatch(chunk, b, '/') && this.tag[0] !== '/') {
+        if (voidTags.has(this.tag) || (rmatch(chunk, b, '/') && this.tag[0] !== '/')) {
           tokens.push(new Token(T_TAG_END, '/', false));
           state = S_TEXT;
           hasEscape = false;
@@ -417,13 +420,6 @@ export class TemplateResult {
 }
 
 TemplateResult.cache = new WeakMap();
-
-// IE11's WeakMap implementation is incorrect
-try {
-  new WeakMap().set({}, 1).get({});
-} catch (e) {
-  TemplateResult.cache = new Map();
-}
 
 export function html(callsite, ...values) {
   return new TemplateResult(callsite, values);
