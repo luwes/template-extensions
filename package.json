@@ -26,11 +26,11 @@
   },
   "homepage": "https://github.com/luwes/template-extensions#readme",
   "devDependencies": {
-    "@open-wc/testing": "^3.1.6",
-    "@web/test-runner": "^0.14.0",
-    "esbuild": "^0.15.14",
-    "eslint": "^8.24.0",
-    "prettier": "^2.7.1"
+    "@open-wc/testing": "^3.1.7",
+    "@web/test-runner": "^0.15.0",
+    "esbuild": "^0.16.10",
+    "eslint": "^8.30.0",
+    "prettier": "^2.8.1"
   },
   "prettier": {
     "singleQuote": true
