@@ -78,16 +78,20 @@ export function renderTree(node) {
   if (attributes) {
     attributes = toAttributes(attributes);
 
-    let pairs = Object.keys(attributes).map((k) => {
-      return esc(k) + '="' + esc(attributes[k]) + '"';
-    });
+    let pairs = [];
+    for (let name in attributes) {
+      const attrName = esc(name);
+      const attrValue = esc(attributes[name]);
+      pairs.push(`${attrName}${attrValue === '' ? '' : `="${attrValue}"`}`);
+    }
 
     let open = nodeName;
     if (pairs.length > 0) {
       open += ' ' + pairs.join(' ');
     }
 
-    return `<${open}>${childNodes.flatMap(renderTree).join('')}</${nodeName}>`;
+    const closeTag = nodeName == '!DOCTYPE' ? '' : `</${nodeName}>`;
+    return `<${open}>${childNodes.flatMap(renderTree).join('')}${closeTag}`;
   }
 
   if (Array.isArray(node)) {
