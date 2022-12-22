@@ -93,7 +93,6 @@ function createSelectors(parts) {
     if (template) selector.t = template.outerHTML;
     selector.v = part.value;
     selectors.push(selector);
-    // console.warn(selector);
   }
 
   return selectors;
@@ -206,7 +205,7 @@ function createChildNodePart(node, value, tplHTML, nodesLen = 1, offset = 0) {
 const attrLists = new WeakMap();
 
 function createAttrPart(node, value, attrName, offset = 0) {
-  if (typeof value === 'function') value = '';
+  if (typeof value === 'function') value = undefined;
 
   const attr = node.attributes[attrName];
   const list = attrLists.get(node)?.[attrName] ?? new AttrPartList();

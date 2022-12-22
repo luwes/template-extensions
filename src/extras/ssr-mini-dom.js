@@ -60,6 +60,10 @@ export class Element extends Node {
     delete this.attributes[name];
   }
 
+  hasAttribute(name) {
+    return name in this.attributes;
+  }
+
   getAttributeNS(namespace, name) {
     return this.attributes[name];
   }
@@ -70,5 +74,9 @@ export class Element extends Node {
 
   removeAttributeNS(namespace, name) {
     delete this.attributes[name];
+  }
+
+  hasAttributeNS(namespace, name) {
+    return name in this.attributes;
   }
 }
