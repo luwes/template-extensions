@@ -1,4 +1,10 @@
 /**
+ * Adapted from https://github.com/dy/template-parts
+ * ISC License (ISC)
+ * Copyright 2021 Dmitry Iv.
+ */
+
+/**
  * DOM Part API
  * https://github.com/WICG/webcomponents/blob/gh-pages/proposals/DOM-Parts.md
  *
@@ -169,7 +175,7 @@ export class ChildNodePart extends Part {
 
   replace(...nodes) {
     // replace current nodes with new nodes.
-    const normalisedNodes = nodes
+    nodes = nodes
       .flat()
       .flatMap((node) =>
         node == null
@@ -183,19 +189,14 @@ export class ChildNodePart extends Part {
           : [new Text(node)]
       );
 
-    if (!normalisedNodes.length) {
-      normalisedNodes.push(new Text(''));
-    }
+    if (!nodes.length) nodes.push(new Text(''));
 
-    this.#nodes[0].before(...normalisedNodes);
-
-    for (const oldNode of this.#nodes) {
-      if (!normalisedNodes.includes(oldNode)) {
-        oldNode.remove();
-      }
-    }
-
-    this.#nodes = normalisedNodes;
+    this.#nodes = swapdom(
+      this.#nodes[0].parentNode,
+      this.#nodes,
+      nodes,
+      this.nextSibling
+    );
   }
 
   replaceHTML(html) {
@@ -224,4 +225,42 @@ export class InnerTemplatePart extends ChildNodePart {
       this.template.getAttribute(this.directive)
     );
   }
+}
+
+function swapdom(parent, a, b, end = null) {
+  let i = 0,
+    cur,
+    next,
+    bi,
+    n = b.length,
+    m = a.length;
+
+  // skip head/tail
+  while (i < n && i < m && a[i] == b[i]) i++;
+  while (i < n && i < m && b[n - 1] == a[m - 1]) end = b[(--m, --n)];
+
+  // append/prepend/trim shortcuts
+  if (i == m) while (i < n) parent.insertBefore(b[i++], end);
+  if (i == n) while (i < m) parent.removeChild(a[i++]);
+  else {
+    cur = a[i];
+
+    while (i < n) {
+      (bi = b[i++]), (next = cur ? cur.nextSibling : end);
+
+      // skip
+      if (cur == bi) cur = next;
+      // swap / replace
+      else if (i < n && b[i] == next)
+        parent.replaceChild(bi, cur), (cur = next);
+      // insert
+      else parent.insertBefore(bi, cur);
+    }
+
+    // remove tail
+    while (cur != end)
+      (next = cur.nextSibling), parent.removeChild(cur), (cur = next);
+  }
+
+  return b;
 }
