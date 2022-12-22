@@ -1,6 +1,6 @@
 {
   "name": "template-extensions",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "",
   "type": "module",
   "main": "dist/template-extensions.js",
