@@ -22,6 +22,29 @@
 - **npm**: `npm i template-extensions`  
 - **cdn**: https://cdn.jsdelivr.net/npm/template-extensions  
 
+## Basics
+
+```html
+<template id="tpl">
+  <div class="foo {{y}}">{{x}} world</div>
+</template>
+```
+
+When passing the above template to the `TemplateInstance` constructor
+2 DOM parts are created that represent `{{x}}` and `{{y}}` in the HTML. 
+The second constructor argument is the state object (or params) that will fill 
+in the values of the DOM parts.
+
+```js
+import { TemplateInstance } from 'template-extensions';
+
+const tplInst = new TemplateInstance(tpl, { x: 'Hello', y: 'bar'})
+document.append(tplInst);
+```
+
+A `TemplateInstance` instance is a subclass of `DocumentFragment` so it can
+be appended directly to the DOM.
+
 
 ## Usage
 
@@ -84,6 +107,64 @@ in the template.
   content.update({ name: 'Ryosuke Niwa', email: 'rniwa@apple.com' });
 </script>
 ```
+
+## Template Processor
+
+### Default processor
+
+The default processor looks a bit like the function below. Each time 
+`templateInstance.update(params)` is called this function runs and
+iterates through each DOM part and evaluates what needs to happen.
+
+```js
+function processCallback(instance, parts, params) {
+  if (!params) return;
+  for (const [expression, part] of parts) {
+    if (expression in params) {
+      const value = params[expression];
+      if (
+        typeof value === 'boolean' &&
+        part instanceof AttrPart &&
+        typeof part.element[part.attributeName] === 'boolean'
+      ) {
+        part.booleanValue = value;
+      } else if (typeof value === 'function' && part instanceof AttrPart) {
+        part.value = undefined;
+        part.element[part.attributeName] = value;
+      } else {
+        part.value = value;
+      }
+    }
+  }
+}
+```
+
+The default processor handles property identity (i.e. `part.value = params[expression]`),
+boolean attribute or function.
+
+```js
+const el = document.createElement('template')
+el.innerHTML = `<div x={{x}} hidden={{hidden}} onclick={{onclick}}></div>`
+
+const tpl = new TemplateInstance(el, { x: 'Hello', hidden: false, onclick: () => {} })
+el.getAttribute('x') // 'Hello'
+el.hasAttribute('hidden') // false
+el.onclick // function
+```
+
+
+## Credit
+
+Big thanks to everyone who contributed to the Template Instantiation and
+Dom Parts proposals.
+
+The Template Instantiation and DOM parts code is based on the great work of
+[Keith Cirkel](https://github.com/keithamus) and [Dmitry Iv.](https://github.com/dy).
+
+- https://github.com/github/template-parts
+- https://github.com/github/jtml
+- https://github.com/dy/template-parts
+
 
 ## Interfaces
 
@@ -160,15 +241,3 @@ export class InnerTemplatePart extends ChildNodePart {
   get expression(): Expression | null;
 }
 ```
-
-## Credit
-
-Big thanks to everyone who contributed to the Template Instantiation and
-Dom Parts proposals.
-
-The Template Instantiation and DOM parts code is based on the great work of
-[Dmitry Iv.](https://github.com/dy) and [Keith Cirkel](https://github.com/keithamus).
-
-- https://github.com/dy/template-parts
-- https://github.com/github/template-parts
-- https://github.com/github/jtml
