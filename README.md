@@ -152,6 +152,21 @@ el.hasAttribute('hidden') // false
 el.onclick // function
 ```
 
+## `renderToString(html, state, processor=defaultProcessor)`
+
+Renders HTML with expressions and inner templates to a string. No JSDOM required.
+
+```js
+import { renderToString } from 'template-extensions/src/extras/ssr.js';
+
+console.log(renderToString(`<div class="my-{{x}}-state {{y}}">{{z}}</div>`, {
+  x: 'foo',
+  y: 'bar',
+  z: 'baz',
+}))
+// <div class="my-foo-state bar">baz</div>
+```
+
 
 ## Credit
 
