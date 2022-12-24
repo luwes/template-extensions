@@ -1,7 +1,7 @@
 {
   "name": "template-extensions",
   "version": "0.7.0",
-  "description": "",
+  "description": "An umbrella of low-level JavaScript API's to process templates and HTML",
   "type": "module",
   "main": "dist/template-extensions.js",
   "types": "src/types.d.ts",
@@ -25,6 +25,9 @@
     "url": "https://github.com/luwes/template-extensions/issues"
   },
   "homepage": "https://github.com/luwes/template-extensions#readme",
+  "dependencies": {
+    "htmltag": "^0.6.5"
+  },
   "devDependencies": {
     "@open-wc/testing": "^3.1.7",
     "@web/test-runner": "^0.15.0",
@@ -52,8 +55,5 @@
     "rules": {
       "semi": "error"
     }
-  },
-  "dependencies": {
-    "htmltag": "^0.6.5"
   }
 }

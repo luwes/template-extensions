@@ -137,6 +137,7 @@ function createParts(element, selectors) {
   const parts = [];
   for (let selector of selectors) {
     // console.log(selector);
+    // console.log(JSON.stringify(selector, null, ' '));
     const {
       x: expr,
       p: path,
@@ -190,6 +191,7 @@ function createChildNodePart(node, value, tplHTML, nodesLen = 1, offset = 0) {
   } else {
     nodes = getNextChildNodes(node, nodesLen);
   }
+
   if (tplHTML) {
     const temp = document.createElement('template');
     temp.innerHTML = tplHTML;
@@ -199,6 +201,7 @@ function createChildNodePart(node, value, tplHTML, nodesLen = 1, offset = 0) {
       nodes
     );
   }
+
   return new ChildNodePart(nodes[0].parentNode, nodes);
 }
 

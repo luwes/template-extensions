@@ -1,18 +1,27 @@
 # Template Extensions [![test](https://github.com/luwes/template-extensions/actions/workflows/ci.yml/badge.svg)](https://github.com/luwes/template-extensions/actions/workflows/ci.yml) [![size](https://img.shields.io/bundlephobia/minzip/template-extensions?label=size)](https://bundlephobia.com/result?p=template-extensions) [![npm version](https://img.shields.io/npm/v/template-extensions)](http://npmjs.org/template-extensions)
 
-The goal of this library is to easily create HTML templates with dynamic parts
-which is covered by the API's based on the
-[Template Instantiation](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md)
-and [DOM Parts](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/DOM-Parts.md)
-proposals.
+- Friendly HTML-based template syntax w/ efficient updates via DOM parts
+- Extendable with template processors
+- Clear HTML / JS separation
+- Progressive enhancement (SSR/SSG)
+- Based on [web component](https://github.com/WICG/webcomponents) spec proposals
+  - [Template Instantiation](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md)
+  - [DOM Parts](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/DOM-Parts.md)
 
-In addition it adds new API's to progressively enhance
-existing elements (from SSR/SSG) with these dynamic parts.
+
 
 ## Examples
 
- - [TodoMVC](https://github.com/luwes/template-extensions-todomvc)
- - [Create your own UI library](./examples/interhtml.js)
+- [Counter](https://template-extensions.vercel.app/examples/)
+- [TodoMVC](https://github.com/luwes/template-extensions-todomvc)
+- [Create your own UI library (Lit like API)](./examples/interhtml.js)
+
+
+## Install
+
+- **npm**: `npm i template-extensions`  
+- **cdn**: https://cdn.jsdelivr.net/npm/template-extensions  
+
 
 ## Usage
 
@@ -25,7 +34,9 @@ existing elements (from SSR/SSG) with these dynamic parts.
     Email: <a href="mailto:{{email}}">{{email}}</a>
   </section>
 </template>
-<script>
+<script type="module">
+  import { TemplateInstance } from 'template-extensions';
+
   const params = { name: 'Ryosuke Niwa', email: 'rniwa@webkit.org' };
   const content = new TemplateInstance(info, params);
   document.body.append(content);
@@ -35,14 +46,6 @@ existing elements (from SSR/SSG) with these dynamic parts.
 ```
 
 ### Simple hydrate ([Codesandbox](https://codesandbox.io/s/template-extensions-2v4m2y?file=/index.html))
-
-This might come as a surprise but most hydration implementations require
-your markup twice. One with the expressions filled in and the other without.
-
-One of the goals of `AssignedTemplateInstance` is to not have this duplicate
-code but this functionality is under active development. It will require a
-new format that only defines the dynamic expressions much like you would
-manually query each SSR'd element that requires dynamicism and add DOM parts to it.
 
 Note that assigning a template instance to an existing element is only
 concerned about the structure and content leading up to the expressions.
@@ -72,7 +75,9 @@ in the template.
     Email: <a href="mailto:{{email}}">{{email}}</a>
   </section>
 </template>
-<script>
+<script type="module">
+  import { AssignedTemplateInstance } from 'template-extensions';
+
   const params = { name: 'Ryosuke Niwa', email: 'rniwa@webkit.org' };
   const content = new AssignedTemplateInstance(root, info, params);
   // later on
