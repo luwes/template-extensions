@@ -34,6 +34,7 @@ export const defaultProcessor = {
         ) {
           part.booleanValue = value;
         } else if (typeof value === 'function' && part instanceof AttrPart) {
+          part.value = undefined;
           part.element[part.attributeName] = value;
         } else {
           part.value = value;
