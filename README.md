@@ -48,7 +48,8 @@ document.append(tplInst);
 ```
 
 A `TemplateInstance` instance is a subclass of `DocumentFragment` so it can
-be appended directly to the DOM.
+be appended directly to the DOM. In addition it gets a new `update(params)`
+method that can be called to efficiently update the DOM parts.
 
 
 ## Usage
