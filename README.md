@@ -13,8 +13,13 @@
 ## Examples
 
 - [Counter](https://template-extensions.vercel.app/examples/)
-- [TodoMVC with SSR and hydration](https://github.com/luwes/template-extensions-todomvc)
-- [Create your own UI library (Lit like API)](./examples/interhtml.js)
+- [Media Chrome Themes](https://github.com/muxinc/media-chrome/blob/main/src/js/media-theme-element.js) 
+in [Mux Player](https://github.com/muxinc/elements/blob/main/packages/mux-player/src/media-theme-mux.html) 
+([demo](https://stream.new/v/DVBhwqkhxkOiLRjUAYJS6mCBJSuC00tB4iWjJmEofJoo))
+- [TodoMVC with SSR and hydration](https://github.com/luwes/template-extensions-todomvc) 
+([demo](https://template-extensions-todomvc.pages.dev/))
+- [Create your own UI library (Lit like API)](./examples/interhtml.js) 
+([demo](https://template-extensions.vercel.app/examples/todos.html))
 
 
 ## Install
