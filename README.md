@@ -13,7 +13,7 @@
 ## Examples
 
 - [Counter](https://template-extensions.vercel.app/examples/)
-- [TodoMVC](https://github.com/luwes/template-extensions-todomvc)
+- [TodoMVC with SSR and hydration](https://github.com/luwes/template-extensions-todomvc)
 - [Create your own UI library (Lit like API)](./examples/interhtml.js)
 
 
