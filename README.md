@@ -1,4 +1,4 @@
-# Template Extensions [![test](https://github.com/luwes/template-extensions/actions/workflows/ci.yml/badge.svg)](https://github.com/luwes/template-extensions/actions/workflows/ci.yml) [![size](https://img.shields.io/bundlephobia/minzip/template-extensions?label=size)](https://bundlephobia.com/result?p=template-extensions) [![npm version](https://img.shields.io/npm/v/template-extensions)](http://npmjs.org/template-extensions)
+# Template Extensions [![size](https://img.shields.io/bundlephobia/minzip/template-extensions?label=size)](https://bundlephobia.com/result?p=template-extensions) [![npm version](https://img.shields.io/npm/v/template-extensions)](http://npmjs.org/template-extensions)
 
 - Friendly HTML-based template syntax w/ efficient updates via DOM parts
 - Extendable with template processors
@@ -43,7 +43,7 @@ in the values of the DOM parts.
 ```js
 import { TemplateInstance } from 'template-extensions';
 
-const tplInst = new TemplateInstance(tpl, { x: 'Hello', y: 'bar'})
+const tplInst = new TemplateInstance(tpl, { x: 'Hello', y: 'bar'} /*, processor*/);
 document.append(tplInst);
 ```
 
@@ -51,6 +51,10 @@ A `TemplateInstance` instance is a subclass of `DocumentFragment` so it can
 be appended directly to the DOM. In addition it gets a new `update(params)`
 method that can be called to efficiently update the DOM parts.
 
+An optional third argument is de [template processor](#template-processor). 
+This hook allows you to handle each expression and DOM part in a specialized
+way. It allows you to write your own template language syntax, think Vue. 
+Everything between the curly braces can be parsed and evaluated as you see fit.
 
 ## Usage
 
@@ -158,9 +162,63 @@ el.hasAttribute('hidden') // false
 el.onclick // function
 ```
 
-## `renderToString(html, state, processor=defaultProcessor)`
 
-Renders HTML with expressions and inner templates to a string. No JSDOM required.
+## InnerTemplatePart
+
+The [`InnerTemplatePart`](https://github.com/WICG/webcomponents/blob/gh-pages/proposals/Template-Instantiation.md#33-conditionals-and-loops-using-nested-templates) 
+enables you to write conditionals and loops in your templates. The inner templates
+are expected to have a `directive` and `expression` attribute.
+
+### if
+
+```html
+<template>
+  <div>
+    <template directive="if" expression="isActive">{{x}}</template>
+  </div>
+</template>
+```
+
+### foreach
+
+```html
+<template>
+  <div>
+    <template directive="foreach" expression="items">
+      <li class={{class}} data-value={{value}}>{{label}}</li>
+    </template>
+  </div>
+</template>
+```
+
+```js
+export const processor = {
+  processCallback(instance, parts, params) {
+    if (!params) return;
+    for (const [expression, part] of parts) {
+      if (part instanceof InnerTemplatePart) {
+        switch (part.directive) {
+          case 'foreach': {
+            part.replace((params[expression] ?? []).map(item => {
+              return new TemplateInstance(part.template, item, processor);
+            }));
+            break;
+          }
+        }
+        continue;
+      }
+      // handle rest of expressions...
+      if (expression in params) {
+    }
+  }
+};
+```
+
+
+## `renderToString(html, params, processor=defaultProcessor)`
+
+Renders HTML with expressions and inner templates to a string. No JSDOM required.  
+It's possible to use the same template processor for client and server.
 
 ```js
 import { renderToString } from 'template-extensions/src/extras/ssr.js';
