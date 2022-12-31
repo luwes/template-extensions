@@ -1,7 +1,7 @@
 # Template Extensions [![size](https://img.shields.io/bundlephobia/minzip/template-extensions?label=size)](https://bundlephobia.com/result?p=template-extensions) [![npm version](https://img.shields.io/npm/v/template-extensions)](http://npmjs.org/template-extensions)
 
 - Friendly HTML-based template syntax w/ efficient updates via DOM parts
-- Extendable with template processors
+- Custom syntax with template processors
 - Clear HTML / JS separation
 - Progressive enhancement (SSR/SSG)
 - Based on [web component](https://github.com/WICG/webcomponents) spec proposals
