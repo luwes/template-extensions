@@ -416,7 +416,7 @@ test('processCallback: is called on update', () => {
 
 test('innerTemplatePart: full form', () => {
   const template = document.createElement('template');
-  template.innerHTML = `<div><template directive="x" expression="x">{{ x }}</template></div>`;
+  template.innerHTML = `<div><template directive="x" expression="{{ x }}">{{ x }}</template></div>`;
   let arr = [];
   const instance = new TemplateInstance(
     template,

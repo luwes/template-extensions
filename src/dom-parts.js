@@ -220,10 +220,15 @@ export class InnerTemplatePart extends ChildNodePart {
   }
 
   get expression() {
-    return (
+    let expression =
       this.template.getAttribute('expression') ??
-      this.template.getAttribute(this.directive)
-    );
+      this.template.getAttribute(this.directive);
+
+    if (expression.startsWith('{{')) {
+      expression = expression.trim().slice(2,-2).trim();
+    }
+
+    return expression;
   }
 }
 
