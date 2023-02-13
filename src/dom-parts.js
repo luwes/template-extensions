@@ -209,26 +209,19 @@ export class ChildNodePart extends Part {
 export class InnerTemplatePart extends ChildNodePart {
   constructor(parentNode, template, nodes) {
     super(parentNode, nodes);
-    this.template = template;
-  }
 
-  get directive() {
-    return (
-      this.template.getAttribute('directive') ??
-      this.template.getAttribute('type')
-    );
-  }
+    let directive =
+      template.getAttribute('directive') ?? template.getAttribute('type');
 
-  get expression() {
     let expression =
-      this.template.getAttribute('expression') ??
-      this.template.getAttribute(this.directive);
+      template.getAttribute('expression') ?? template.getAttribute(directive);
 
-    if (expression.startsWith('{{')) {
+    if (expression?.startsWith('{{'))
       expression = expression.trim().slice(2, -2).trim();
-    }
 
-    return expression;
+    this.expression = expression;
+    this.template = template;
+    this.directive = directive;
   }
 }
 
