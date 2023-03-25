@@ -27,7 +27,6 @@ export class Part {
 }
 
 export class AttrPartList {
-  static attrPartToList = new WeakMap();
   #items = [];
 
   [Symbol.iterator]() {
@@ -59,6 +58,10 @@ export class AttrPartList {
     return this.#items.join('');
   }
 }
+
+// Define as an external static so esbuild doesn't add unnecessary transforms
+// see https://github.com/evanw/esbuild/issues/2416
+AttrPartList.attrPartToList = new WeakMap();
 
 export class AttrPart extends Part {
   #value = '';
