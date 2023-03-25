@@ -1,6 +1,6 @@
 {
   "name": "template-extensions",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "An umbrella of low-level JavaScript API's to process templates and HTML",
   "type": "module",
   "main": "dist/index.js",
