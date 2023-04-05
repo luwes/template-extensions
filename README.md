@@ -1,4 +1,7 @@
-# Template Extensions [![size](https://img.shields.io/bundlephobia/minzip/template-extensions?label=size)](https://bundlephobia.com/result?p=template-extensions) [![npm version](https://img.shields.io/npm/v/template-extensions)](http://npmjs.org/template-extensions)
+# Template Extensions 
+
+[![npm version](https://img.shields.io/npm/v/template-extensions?style=flat-square)](http://npmjs.org/template-extensions)
+[![size](https://img.shields.io/bundlephobia/minzip/template-extensions?label=size&style=flat-square)](https://bundlephobia.com/result?p=template-extensions) 
 
 - Friendly HTML-based template syntax w/ efficient updates via DOM parts
 - Custom syntax with template processors
